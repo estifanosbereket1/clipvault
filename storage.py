@@ -42,4 +42,12 @@ def add_entry(content: str):
 
 
 def get_history(limit=20):
-    pass
+    db_path = get_db_path()
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    latest_contents = cur.execute(
+        "SELECT * FROM history ORDER BY created_at DESC LIMIT (?)", (limit,)
+    ).fetchall()
+    conn.close()
+    return latest_contents
