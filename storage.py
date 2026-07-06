@@ -1,3 +1,4 @@
+import contextlib
 import os
 import sqlite3
 from pathlib import Path
@@ -10,74 +11,70 @@ def get_db_path():
     return Path(db_path)
 
 
-def init_db():
+@contextlib.contextmanager
+def get_connection():
+    # setup
     db_path = get_db_path()
     conn = sqlite3.connect(db_path)
-    cur = conn.cursor()
-    cur.execute(
-        "CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY,content TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, pinned BOOLEAN DEFAULT 0)"
-    )
-    conn.commit()
-    conn.close()
+    conn.row_factory = sqlite3.Row
+    try:
+        yield conn
+    finally:
+        # teardown
+        conn.commit()
+        conn.close()
+
+
+def init_db():
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY,content TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, pinned BOOLEAN DEFAULT 0)"
+        )
 
 
 def add_entry(content: str):
     inserted = False
     content = content.strip()
     if content:
-        db_path = get_db_path()
-        conn = sqlite3.connect(db_path)
-        cur = conn.cursor()
-        latest_content = cur.execute(
-            "SELECT content FROM history ORDER BY created_at DESC LIMIT 1"
-        ).fetchone()
-        if latest_content is None or content != latest_content[0]:
-            cur.execute("INSERT INTO history (content) values (?)", (content,))
-            print(f"{content} insterted")
-            inserted = True
-
-        conn.commit()
-        conn.close()
+        with get_connection() as conn:
+            cur = conn.cursor()
+            latest_content = cur.execute(
+                "SELECT content FROM history ORDER BY created_at DESC LIMIT 1"
+            ).fetchone()
+            if latest_content is None or content != latest_content[0]:
+                cur.execute("INSERT INTO history (content) VALUES (?)", (content,))
+                inserted = True
     return inserted
 
 
 def get_history(limit=20):
-    db_path = get_db_path()
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
-    latest_contents = cur.execute(
-        "SELECT * FROM history ORDER BY created_at DESC LIMIT (?)", (limit,)
-    ).fetchall()
-    conn.close()
-    return latest_contents
+    with get_connection() as conn:
+        cur = conn.cursor()
+        latest_contents = cur.execute(
+            "SELECT * FROM history ORDER BY created_at DESC LIMIT (?)", (limit,)
+        ).fetchall()
+        return latest_contents
 
 
 def get_entry_by_id(entry_id):
-    db_path = get_db_path()
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
-    entry = cur.execute("SELECT * FROM history WHERE id = (?)", (entry_id,)).fetchone()
-    conn.close()
-    return entry
+    with get_connection() as conn:
+        cur = conn.cursor()
+        entry = cur.execute(
+            "SELECT * FROM history WHERE id = (?)", (entry_id,)
+        ).fetchone()
+        return entry
 
 
 def delete_entry(entry_id):
-    db_path = get_db_path()
-    conn = sqlite3.connect(db_path)
-    cur = conn.cursor()
-    cur.execute("DELETE FROM history where id = (?)", (entry_id,))
-    rows_deleted = cur.rowcount
-    conn.commit()
-    conn.close()
-    return rows_deleted
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM history where id = (?)", (entry_id,))
+        rows_deleted = cur.rowcount
+        return rows_deleted
 
 
 def clear_history():
-    db_path = get_db_path()
-    conn = sqlite3.connect(db_path)
-    cur = conn.cursor()
-    cur.execute("DELETE FROM history")
-    conn.commit()
-    conn.close()
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM history")
