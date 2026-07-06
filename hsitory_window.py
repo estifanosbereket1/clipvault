@@ -3,6 +3,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
 
+from qr_display import QrPopup
 from storage import get_history
 
 
@@ -126,9 +127,13 @@ class HistoryWindow(Gtk.Window):
         self.present()
 
 
+def open_qr_popup(entry):
+    QrPopup(entry)
+
+
 def _standalone_test():
     """Quick manual test: opens the window directly, no tray/hotkey needed yet."""
-    win = HistoryWindow()
+    win = HistoryWindow(on_qr_clicked=open_qr_popup)
     win.connect("destroy", Gtk.main_quit)
     win.show_all()
     Gtk.main()
