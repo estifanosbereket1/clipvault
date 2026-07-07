@@ -1,10 +1,11 @@
 import gi
+import pyperclip
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
 
 from qr_display import QrPopup
-from storage import get_history
+from storage import add_entry, delete_entry, get_history
 
 
 def truncate(text: str, max_len: int = 60) -> str:
@@ -78,10 +79,47 @@ class HistoryWindow(Gtk.Window):
 
         self.list_box.show_all()
 
+    # def _build_row(self, entry) -> Gtk.ListBoxRow:
+    #     """Build a single row: [text preview .......... [QR button]]"""
+    #     row = Gtk.ListBoxRow()
+    #     row_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+    #     row_box.set_margin_top(4)
+    #     row_box.set_margin_bottom(4)
+    #     row_box.set_margin_start(6)
+    #     row_box.set_margin_end(6)
+
+    #     text_label = Gtk.Label(label=truncate(entry["content"]))
+    #     text_label.set_xalign(0)
+    #     text_label.set_hexpand(True)
+    #     text_label.set_ellipsize(
+    #         3
+    #     )  # Pango.EllipsizeMode.END, avoids importing Pango just for this
+
+    #     qr_button = Gtk.Button(label="QR")
+    #     qr_button.set_tooltip_text("Show QR code for this entry")
+    #     qr_button.connect("clicked", self._make_qr_handler(entry))
+
+    #     row_box.pack_start(text_label, True, True, 0)
+    #     row_box.pack_end(qr_button, False, False, 0)
+
+    #     row.add(row_box)
+    #     return row
+    def _confirm_delete(self, entry) -> bool:
+        dialog = Gtk.MessageDialog(
+            transient_for=self,
+            flags=0,
+            message_type=Gtk.MessageType.WARNING,
+            buttons=Gtk.ButtonsType.YES_NO,
+            text="Delete this entry?",
+        )
+        dialog.format_secondary_text(truncate(entry["content"], max_len=80))
+        response = dialog.run()
+        dialog.destroy()
+        return response == Gtk.ResponseType.YES
+
     def _build_row(self, entry) -> Gtk.ListBoxRow:
-        """Build a single row: [text preview .......... [QR button]]"""
         row = Gtk.ListBoxRow()
-        row_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        row_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         row_box.set_margin_top(4)
         row_box.set_margin_bottom(4)
         row_box.set_margin_start(6)
@@ -90,19 +128,48 @@ class HistoryWindow(Gtk.Window):
         text_label = Gtk.Label(label=truncate(entry["content"]))
         text_label.set_xalign(0)
         text_label.set_hexpand(True)
-        text_label.set_ellipsize(
-            3
-        )  # Pango.EllipsizeMode.END, avoids importing Pango just for this
+        text_label.set_ellipsize(3)
 
-        qr_button = Gtk.Button(label="QR")
-        qr_button.set_tooltip_text("Show QR code for this entry")
+        qr_button = self._icon_button("view-grid-symbolic", "Show QR code")
         qr_button.connect("clicked", self._make_qr_handler(entry))
 
+        copy_button = self._icon_button("edit-copy-symbolic", "Copy to clipboard")
+        copy_button.connect("clicked", self._make_copy_handler(entry))
+
+        delete_button = self._icon_button("user-trash-symbolic", "Delete entry")
+        delete_button.connect("clicked", self._make_delete_handler(entry))
+
         row_box.pack_start(text_label, True, True, 0)
+        row_box.pack_end(delete_button, False, False, 0)
+        row_box.pack_end(copy_button, False, False, 0)
         row_box.pack_end(qr_button, False, False, 0)
 
         row.add(row_box)
         return row
+
+    def _icon_button(self, icon_name, tooltip):
+        button = Gtk.Button()
+        icon = Gtk.Image.new_from_icon_name(icon_name, Gtk.IconSize.BUTTON)
+        button.set_image(icon)
+        button.set_tooltip_text(tooltip)
+        return button
+
+    def _make_copy_handler(self, entry):
+        def handler(_button):
+            pyperclip.copy(entry["content"])
+            add_entry(entry["content"])
+            self.refresh()
+
+        return handler
+
+    def _make_delete_handler(self, entry):
+        def handler(_button):
+            confirmed = self._confirm_delete(entry)
+            if confirmed:
+                delete_entry(entry["id"])
+                self.refresh()
+
+        return handler
 
     def _make_qr_handler(self, entry):
         """Returns a closure so each button knows which entry it belongs to."""
