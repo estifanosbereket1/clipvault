@@ -32,6 +32,19 @@ def _next_free_custom_path():
         n += 1
 
 
+def find_shortcut_by_name(name: str):
+    """
+    Looks through all registered custom keybindings for one whose `name`
+    matches. Returns (path, current_accelerator) if found, else None.
+    """
+    media_keys_settings = _get_media_keys_settings()
+    for path in media_keys_settings.get_strv("custom-keybindings"):
+        binding_settings = Gio.Settings.new_with_path(CUSTOM_KEYBINDING_SCHEMA, path)
+        if binding_settings.get_string("name") == name:
+            return path, binding_settings.get_string("binding")
+    return None
+
+
 def register_custom_shortcut(name: str, shell_command: str, accelerator: str) -> str:
     """
     Registers a new GNOME custom keyboard shortcut.
@@ -45,7 +58,13 @@ def register_custom_shortcut(name: str, shell_command: str, accelerator: str) ->
     Returns the dconf path this shortcut was registered under, in case you need
     to unregister it later.
     """
-    path = _next_free_custom_path()
+    # Reuse the existing entry for this shortcut name if we already have one,
+    # instead of piling up duplicate bindings on every save.
+    existing = find_shortcut_by_name(name)
+    if existing:
+        path, _old_accelerator = existing
+    else:
+        path = _next_free_custom_path()
 
     binding_settings = Gio.Settings.new_with_path(CUSTOM_KEYBINDING_SCHEMA, path)
     binding_settings.set_string("name", name)
@@ -54,7 +73,8 @@ def register_custom_shortcut(name: str, shell_command: str, accelerator: str) ->
 
     media_keys_settings = _get_media_keys_settings()
     existing_paths = media_keys_settings.get_strv("custom-keybindings")
-    media_keys_settings.set_strv("custom-keybindings", existing_paths + [path])
+    if path not in existing_paths:
+        media_keys_settings.set_strv("custom-keybindings", existing_paths + [path])
 
     return path
 
