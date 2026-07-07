@@ -8,6 +8,7 @@ from clipboard_monitor import start_monitoring
 from history_window import HistoryWindow, open_qr_popup
 from hotkey import setup_signal_listener
 from qr_server import app as qr_app
+from settings_window import SettingsWindow
 from storage import init_db
 from tray import setup_tray_icon
 
@@ -45,7 +46,12 @@ def main():
             os.remove(pid_file)
         Gtk.main_quit()
 
-    indicator = setup_tray_icon(on_open=show_history_window, on_quit=quit_app)
+    def open_settings():
+        SettingsWindow()
+
+    indicator = setup_tray_icon(
+        on_open=show_history_window, on_settings=open_settings, on_quit=quit_app
+    )
 
     Gtk.main()
 
