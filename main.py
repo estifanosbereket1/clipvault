@@ -1,3 +1,4 @@
+import os
 import threading
 
 import gi
@@ -8,6 +9,7 @@ from history_window import HistoryWindow, open_qr_popup
 from hotkey import setup_signal_listener
 from qr_server import app as qr_app
 from storage import init_db
+from tray import setup_tray_icon
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
@@ -36,6 +38,14 @@ def main():
         GLib.idle_add(show_history_window)
 
     setup_signal_listener(on_hotkey_triggered)
+
+    def quit_app():
+        pid_file = "/tmp/clipqr.pid"
+        if os.path.exists(pid_file):
+            os.remove(pid_file)
+        Gtk.main_quit()
+
+    indicator = setup_tray_icon(on_open=show_history_window, on_quit=quit_app)
 
     Gtk.main()
 
