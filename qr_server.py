@@ -1,8 +1,9 @@
 import html
 import json
+import subprocess
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 from storage import get_entry_by_id
 
@@ -135,3 +136,19 @@ def get_clipboard_page(entry_id: int):
     </body>
     </html>"""
     return HTMLResponse(content=formatted_content)
+
+
+def get_ca_root_path() -> str:
+    result = subprocess.run(["mkcert", "-CAROOT"], capture_output=True, text=True)
+    ca_root_dir = result.stdout.strip()
+    return f"{ca_root_dir}/rootCA.pem"
+
+
+@app.get("/setup-ca")
+def get_ca_certificate():
+    ca_path = get_ca_root_path()
+    return FileResponse(
+        path=ca_path,
+        media_type="application/x-x509-ca-cert",
+        filename="clipqr-ca.pem",
+    )

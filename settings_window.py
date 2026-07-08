@@ -1,8 +1,11 @@
 import gi
 
+from qr_popup import generate_qr_for_url
+
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gdk, Gtk
+
+from gi.repository import Gdk, GdkPixbuf, Gtk
 
 from gnome_shortcuts import (
     find_shortcut_by_name,
@@ -108,8 +111,35 @@ class SettingsWindow(Gtk.Window):
         save_settings_button.connect("clicked", self.on_save_settings_clicked)
         outer.pack_start(save_settings_button, False, False, 0)
 
+        ca_instructions = Gtk.Label(
+            label=(
+                "To let a new phone auto-copy from QR codes, scan this to download\n"
+                "the certificate, then go to:\n"
+                "Settings → Security → Encryption & credentials → Install a certificate\n"
+                "→ CA certificate, and select the downloaded file."
+            )
+        )
+        ca_instructions.set_justify(Gtk.Justification.CENTER)
+        outer.pack_start(ca_instructions, False, False, 0)
+
+        ca_qr_button = Gtk.Button(label="Show CA Setup QR")
+        ca_qr_button.connect("clicked", self.on_show_ca_qr_clicked)
+        outer.pack_start(ca_qr_button, False, False, 0)
+
         self.show_all()
         self.grab_focus()
+
+    def on_show_ca_qr_clicked(self, _button):
+        settings = load_settings()
+        url = f"https://{settings['last_known_ip']}:{settings['port']}/setup-ca"
+        image_path = generate_qr_for_url(url, "ca-setup")
+
+        popup = Gtk.Window(title="Scan to trust ClipQR on this device")
+        popup.set_default_size(320, 360)
+        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(image_path, 280, 280, True)
+        image = Gtk.Image.new_from_pixbuf(pixbuf)
+        popup.add(image)
+        popup.show_all()
 
     def on_save_settings_clicked(self, _button):
         new_values = {
@@ -173,6 +203,19 @@ class SettingsWindow(Gtk.Window):
         self.current_binding = self.captured_accelerator
         self.current_label.set_text(f"Currently set to: {self.current_binding}")
         self.save_button.set_sensitive(False)
+
+
+def on_show_ca_qr_clicked(self, _button):
+    settings = load_settings()
+    url = f"https://{settings['last_known_ip']}:{settings['port']}/setup-ca"
+    image_path = generate_qr_for_url(url, "ca-setup")
+
+    popup = Gtk.Window(title="Scan to trust ClipQR on this device")
+    popup.set_default_size(320, 360)
+    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(image_path, 280, 280, True)
+    image = Gtk.Image.new_from_pixbuf(pixbuf)
+    popup.add(image)
+    popup.show_all()
 
 
 def _standalone_test():
