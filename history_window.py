@@ -348,6 +348,14 @@ class HistoryWindow(Gtk.Window):
         dialog.destroy()
         return response == Gtk.ResponseType.YES
 
+    def _format_badge(self, content_type):
+        if not content_type or content_type == "text":
+            return None
+        if content_type.startswith("code:"):
+            language = content_type.split(":", 1)[1]
+            return f"[{language}]"
+        return f"[{content_type.upper()}]"
+
     def _build_row(self, entry, is_pinned: bool) -> Gtk.ListBoxRow:
         row = Gtk.ListBoxRow()
         row_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
@@ -355,6 +363,12 @@ class HistoryWindow(Gtk.Window):
         row_box.set_margin_bottom(4)
         row_box.set_margin_start(6)
         row_box.set_margin_end(6)
+
+        badge_text = self._format_badge(entry["content_type"])
+        if badge_text:
+            badge_label = Gtk.Label(label=badge_text)
+            badge_label.get_style_context().add_class("dim-label")
+            row_box.pack_start(badge_label, False, False, 0)
 
         text_label = Gtk.Label(label=truncate(entry["content"]))
         text_label.set_xalign(0)

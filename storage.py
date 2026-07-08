@@ -3,6 +3,8 @@ import os
 import sqlite3
 from pathlib import Path
 
+from content_detector import detect_type
+
 
 def get_db_path():
     base_path = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
@@ -37,6 +39,8 @@ def init_db():
             cur.execute(
                 "ALTER TABLE history ADD COLUMN pinned_at DATETIME DEFAULT NULL"
             )
+        if "content_type" not in columns:
+            cur.execute("ALTER TABLE history ADD COLUMN content_type TEXT DEFAULT NULL")
 
 
 MAX_PINNED = 5
@@ -105,7 +109,11 @@ def add_entry(content: str):
                 "SELECT content FROM history ORDER BY created_at DESC LIMIT 1"
             ).fetchone()
             if latest_content is None or content != latest_content[0]:
-                cur.execute("INSERT INTO history (content) VALUES (?)", (content,))
+                content_type = detect_type(content)
+                cur.execute(
+                    "INSERT INTO history (content, content_type) VALUES (?, ?)",
+                    (content, content_type),
+                )
                 inserted = True
     return inserted
 
