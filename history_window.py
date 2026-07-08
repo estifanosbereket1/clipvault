@@ -7,6 +7,7 @@ from datetime import datetime
 from gi.repository import GLib, Gtk
 
 from clipboard_wipe import schedule_wipe
+from diff_display import DiffPopup
 from qr_display import QrPopup
 from settings_store import load_settings
 from storage import (
@@ -119,7 +120,7 @@ class HistoryWindow(Gtk.Window):
         if pinned_entries:
             self.pinned_label.show()
             for entry in pinned_entries:
-                row = self._build_row(entry, is_pinned=True)
+                row = self._build_row(entry, is_pinned=True, previous_entry=None)
                 self.pinned_list_box.add(row)
         else:
             self.pinned_label.hide()
@@ -130,9 +131,19 @@ class HistoryWindow(Gtk.Window):
             empty_label.set_margin_top(20)
             self.list_box.add(empty_label)
         else:
-            for entry in recent_entries:
-                row = self._build_row(entry, is_pinned=False)
+            for index, entry in enumerate(recent_entries):
+                previous_entry = (
+                    recent_entries[index + 1]
+                    if index + 1 < len(recent_entries)
+                    else None
+                )
+                row = self._build_row(
+                    entry, is_pinned=False, previous_entry=previous_entry
+                )
                 self.list_box.add(row)
+            # for entry in recent_entries:
+            #     row = self._build_row(entry, is_pinned=False)
+            #     self.list_box.add(row)
 
         self.pinned_list_box.show_all()
         self.list_box.show_all()
@@ -173,7 +184,7 @@ class HistoryWindow(Gtk.Window):
             return f"[{language}]"
         return f"[{content_type.upper()}]"
 
-    def _build_row(self, entry, is_pinned: bool) -> Gtk.ListBoxRow:
+    def _build_row(self, entry, is_pinned: bool, previous_entry=None) -> Gtk.ListBoxRow:
         row = Gtk.ListBoxRow()
         row_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         row_box.set_margin_top(4)
@@ -209,6 +220,15 @@ class HistoryWindow(Gtk.Window):
         text_label.set_ellipsize(3)
         if stale:  # --- NEW: dim the preview text too when stale ---
             text_label.get_style_context().add_class("dim-label")
+
+        if previous_entry is not None:
+            diff_button = self._icon_button(
+                "view-list-symbolic", "Compare with previous entry"
+            )
+            diff_button.connect(
+                "clicked", self._make_diff_handler(entry, previous_entry)
+            )
+            row_box.pack_end(diff_button, False, False, 0)
 
         pin_icon = "starred-symbolic" if is_pinned else "non-starred-symbolic"
         pin_tooltip = "Unpin" if is_pinned else "Pin (max 5)"
@@ -309,6 +329,12 @@ class HistoryWindow(Gtk.Window):
         button.set_image(icon)
         button.set_tooltip_text(tooltip)
         return button
+
+    def _make_diff_handler(self, entry, previous_entry):
+        def handler(_button):
+            DiffPopup(previous_entry["content"], entry["content"])
+
+        return handler
 
     def _make_burn_toggle_handler(self, entry):
         def handler(_button):
