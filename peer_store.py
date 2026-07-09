@@ -51,6 +51,19 @@ def set_peer_status(name: str, status: str):
         peers[name]["status"] = status
         save_peers(peers)
 
+def get_peer_last_sync(name: str) -> str:
+    peers = load_peers()
+    if name in peers:
+        return peers[name].get("last_sync", "2020-01-01 00:00:00")
+    return "2020-01-01 00:00:00"
+
+
+def set_peer_last_sync(name: str, timestamp: str):
+    peers = load_peers()
+    if name in peers:
+        peers[name]["last_sync"] = timestamp
+        save_peers(peers)
+
 
 def get_pending_peers() -> dict:
     return {name: info for name, info in load_peers().items() if info["status"] == "pending"}

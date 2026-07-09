@@ -5,7 +5,7 @@ import subprocess
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 
-from storage import get_entry_by_id
+from storage import get_entry_by_id, get_local_entries_since
 
 app = FastAPI()
 
@@ -136,6 +136,17 @@ def get_clipboard_page(entry_id: int):
     </body>
     </html>"""
     return HTMLResponse(content=formatted_content)
+
+@app.get("/sync/pull")
+def sync_pull(since: str = "2020-01-01 00:00:00"):
+    entries = get_local_entries_since(since)
+    return [
+        {
+            "content": e["content"],
+            "created_at": e["created_at"],
+        }
+        for e in entries
+    ]
 
 
 def get_ca_root_path() -> str:

@@ -26,7 +26,6 @@ def get_connection():
         conn.commit()
         conn.close()
 
-
 def init_db():
     with get_connection() as conn:
         cur = conn.cursor()
@@ -36,16 +35,55 @@ def init_db():
         cur.execute("PRAGMA table_info(history)")
         columns = [row["name"] for row in cur.fetchall()]
         if "pinned_at" not in columns:
-            cur.execute(
-                "ALTER TABLE history ADD COLUMN pinned_at DATETIME DEFAULT NULL"
-            )
+            cur.execute("ALTER TABLE history ADD COLUMN pinned_at DATETIME DEFAULT NULL")
         if "content_type" not in columns:
             cur.execute("ALTER TABLE history ADD COLUMN content_type TEXT DEFAULT NULL")
         if "self_destruct" not in columns:
-            cur.execute(
-                "ALTER TABLE history ADD COLUMN self_destruct BOOLEAN DEFAULT 0"
-            )
+            cur.execute("ALTER TABLE history ADD COLUMN self_destruct BOOLEAN DEFAULT 0")
+        if "origin" not in columns:
+            cur.execute("ALTER TABLE history ADD COLUMN origin TEXT DEFAULT 'local'")
 
+
+# def init_db():
+#     with get_connection() as conn:
+#         cur = conn.cursor()
+#         cur.execute(
+#             "CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY,content TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, pinned BOOLEAN DEFAULT 0)"
+#         )
+#         cur.execute("PRAGMA table_info(history)")
+#         columns = [row["name"] for row in cur.fetchall()]
+#         if "pinned_at" not in columns:
+#             cur.execute(
+#                 "ALTER TABLE history ADD COLUMN pinned_at DATETIME DEFAULT NULL"
+#             )
+#         if "content_type" not in columns:
+#             cur.execute("ALTER TABLE history ADD COLUMN content_type TEXT DEFAULT NULL")
+#         if "self_destruct" not in columns:
+#             cur.execute(
+#                 "ALTER TABLE history ADD COLUMN self_destruct BOOLEAN DEFAULT 0"
+#             )
+
+
+def get_local_entries_since(since_timestamp: str, exclude_origin: str = None):
+    """
+    Returns entries that:
+      - originated locally on this machine (never re-broadcasts synced-in entries)
+      - were created after since_timestamp
+      - are not pinned or self-destruct (those never sync)
+    """
+    with get_connection() as conn:
+        cur = conn.cursor()
+        return cur.execute(
+            """
+            SELECT * FROM history
+            WHERE origin = 'local'
+              AND created_at > ?
+              AND pinned = 0
+              AND self_destruct = 0
+            ORDER BY created_at ASC
+            """,
+            (since_timestamp,),
+        ).fetchall()
 
 def toggle_self_destruct(entry_id):
     with get_connection() as conn:
@@ -117,7 +155,7 @@ def get_recent_unpinned(limit=20):
         ).fetchall()
 
 
-def add_entry(content: str):
+def add_entry(content: str, origin: str = "local"):
     inserted = False
     content = content.strip()
     if content:
@@ -129,8 +167,8 @@ def add_entry(content: str):
             if latest_content is None or content != latest_content[0]:
                 content_type = detect_type(content)
                 cur.execute(
-                    "INSERT INTO history (content, content_type) VALUES (?, ?)",
-                    (content, content_type),
+                    "INSERT INTO history (content, content_type, origin) VALUES (?, ?, ?)",
+                    (content, content_type, origin),
                 )
                 inserted = True
     return inserted
