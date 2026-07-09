@@ -66,6 +66,7 @@ def discover_peers(on_peer_found, on_peer_lost) -> tuple[Zeroconf, ServiceBrowse
 
 def _standalone_test():
     import time
+    from peer_store import upsert_discovered_peer
 
     my_ip = get_current_lan_ip()
     my_port = load_settings()["port"]
@@ -75,6 +76,7 @@ def _standalone_test():
             print(f"(ignoring self: {name})")
             return
         print(f"Found peer: {name} at {ip}:{port}")
+        upsert_discovered_peer(name, ip, port)
 
     def on_lost(name):
         print(f"Lost peer: {name}")
@@ -93,7 +95,6 @@ def _standalone_test():
         zc_advertise.unregister_service(info)
         zc_advertise.close()
         zc_discover.close()
-
 
 if __name__ == "__main__":
     _standalone_test()

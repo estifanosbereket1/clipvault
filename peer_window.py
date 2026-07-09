@@ -1,8 +1,5 @@
 import gi
 
-from peer_discovery import advertise_self, discover_peers
-from settings_store import load_settings
-
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
@@ -124,37 +121,10 @@ class PeerWindow(Gtk.Window):
 
 
 def _standalone_test():
-    import time
-    from peer_store import upsert_discovered_peer
-
-    my_ip = get_current_lan_ip()
-    my_port = load_settings()["port"]
-
-    def on_found(name, ip, port):
-        if ip == my_ip and port == my_port:
-            print(f"(ignoring self: {name})")
-            return
-        print(f"Found peer: {name} at {ip}:{port}")
-        upsert_discovered_peer(name, ip, port)
-
-    def on_lost(name):
-        print(f"Lost peer: {name}")
-
-    settings = load_settings()
-    zc_advertise, info = advertise_self(settings["port"], hostname_label=socket.gethostname())
-    print(f"Advertising self on port {settings['port']}...")
-
-    zc_discover, browser = discover_peers(on_found, on_lost)
-    print("Listening for peers... (Ctrl+C to stop)")
-
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        zc_advertise.unregister_service(info)
-        zc_advertise.close()
-        zc_discover.close()
-
+    win = PeerWindow()
+    win.connect("destroy", Gtk.main_quit)
+    win.show_all()
+    Gtk.main()
 
 
 if __name__ == "__main__":
