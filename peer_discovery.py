@@ -1,6 +1,6 @@
 import socket
-
-from zeroconf import ServiceBrowser, ServiceInfo, ServiceListener, Zeroconf
+from zeroconf import ServiceInfo, Zeroconf, ServiceBrowser, ServiceListener
+from settings_store import get_current_lan_ip, load_settings
 
 SERVICE_TYPE = "_clipqr._tcp.local."
 
@@ -14,7 +14,7 @@ def advertise_self(port: int, hostname_label: str) -> tuple[Zeroconf, ServiceInf
     """
     zeroconf = Zeroconf()
 
-    local_ip = socket.gethostbyname(socket.gethostname())
+    local_ip = get_current_lan_ip()
     address_bytes = socket.inet_aton(local_ip)
 
     service_name = f"{hostname_label}.{SERVICE_TYPE}"
@@ -67,18 +67,20 @@ def discover_peers(on_peer_found, on_peer_lost) -> tuple[Zeroconf, ServiceBrowse
 def _standalone_test():
     import time
 
-    from settings_store import load_settings
+    my_ip = get_current_lan_ip()
+    my_port = load_settings()["port"]
 
     def on_found(name, ip, port):
+        if ip == my_ip and port == my_port:
+            print(f"(ignoring self: {name})")
+            return
         print(f"Found peer: {name} at {ip}:{port}")
 
     def on_lost(name):
         print(f"Lost peer: {name}")
 
     settings = load_settings()
-    zc_advertise, info = advertise_self(
-        settings["port"], hostname_label=socket.gethostname()
-    )
+    zc_advertise, info = advertise_self(settings["port"], hostname_label=socket.gethostname())
     print(f"Advertising self on port {settings['port']}...")
 
     zc_discover, browser = discover_peers(on_found, on_lost)
