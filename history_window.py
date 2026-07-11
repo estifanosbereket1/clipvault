@@ -16,6 +16,7 @@ from storage import (
     get_pinned_entries,
     get_recent_unpinned,
     pin_entry,
+    search_entries,
     toggle_self_destruct,
     unpin_entry,
 )
@@ -78,6 +79,11 @@ class HistoryWindow(Gtk.Window):
         header.pack_end(refresh_btn, False, False, 0)
         outer_box.pack_start(header, False, False, 0)
 
+        self.search_entry = Gtk.SearchEntry()
+        self.search_entry.set_placeholder_text("Search clipboard history...")
+        self.search_entry.connect("search-changed", self.on_search_changed)
+        outer_box.pack_start(self.search_entry, False, False, 0)
+
         # --- Pinned section ---
         self.pinned_label = Gtk.Label(label="Pinned")
         self.pinned_label.set_xalign(0)
@@ -116,6 +122,12 @@ class HistoryWindow(Gtk.Window):
 
         self.refresh()
 
+    def on_search_changed(self, _entry):
+        self.refresh()
+
+    def _get_search_query(self) -> str:
+        return self.search_entry.get_text().strip()
+
     def refresh(self):
         """Reload entries from storage and rebuild both sections."""
         for child in self.pinned_list_box.get_children():
@@ -123,22 +135,51 @@ class HistoryWindow(Gtk.Window):
         for child in self.list_box.get_children():
             self.list_box.remove(child)
 
-        pinned_entries = get_pinned_entries()
-        if pinned_entries:
-            self.pinned_label.show()
-            for entry in pinned_entries:
-                row = self._build_row(entry, is_pinned=True, previous_entry=None)
-                self.pinned_list_box.add(row)
+        # pinned_entries = get_pinned_entries()
+        # if pinned_entries:
+        #     self.pinned_label.show()
+        #     for entry in pinned_entries:
+        #         row = self._build_row(entry, is_pinned=True, previous_entry=None)
+        #         self.pinned_list_box.add(row)
+        # else:
+        #     self.pinned_label.hide()
+
+        query = self._get_search_query()
+
+        if query:
+            matched_entries = search_entries(query, limit=100)
+            local_entries = [e for e in matched_entries if e["origin"] == "local"]
+            synced_entries = [e for e in matched_entries if e["origin"] != "local"]
+        else:
+            recent_entries = get_recent_unpinned(limit=load_settings()["history_limit"])
+            local_entries = [e for e in recent_entries if e["origin"] == "local"]
+            synced_entries = [e for e in recent_entries if e["origin"] != "local"]
+
+        # recent_entries = get_recent_unpinned(limit=load_settings()["history_limit"])
+
+        # local_entries = [e for e in recent_entries if e["origin"] == "local"]
+        # synced_entries = [e for e in recent_entries if e["origin"] != "local"]
+
+        # if not local_entries:
+        #     empty_label = Gtk.Label(label="No clipboard history yet.")
+        #     empty_label.set_margin_top(20)
+        #     self.list_box.add(empty_label)
+        #
+        if not query:
+            pinned_entries = get_pinned_entries()
+            if pinned_entries:
+                self.pinned_label.show()
+                for entry in pinned_entries:
+                    row = self._build_row(entry, is_pinned=True, previous_entry=None)
+                    self.pinned_list_box.add(row)
+            else:
+                self.pinned_label.hide()
         else:
             self.pinned_label.hide()
-
-        recent_entries = get_recent_unpinned(limit=load_settings()["history_limit"])
-
-        local_entries = [e for e in recent_entries if e["origin"] == "local"]
-        synced_entries = [e for e in recent_entries if e["origin"] != "local"]
-
         if not local_entries:
-            empty_label = Gtk.Label(label="No clipboard history yet.")
+            empty_label = Gtk.Label(
+                label="No matching entries." if query else "No clipboard history yet."
+            )
             empty_label.set_margin_top(20)
             self.list_box.add(empty_label)
         else:

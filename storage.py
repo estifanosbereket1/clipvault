@@ -204,3 +204,17 @@ def clear_history():
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute("DELETE FROM history")
+
+def search_entries(query: str, limit: int = 50):
+    with get_connection() as conn:
+        cur = conn.cursor()
+        return cur.execute(
+            """
+            SELECT * FROM history
+            WHERE content LIKE ? COLLATE NOCASE
+              AND pinned = 0
+            ORDER BY created_at DESC
+            LIMIT ?
+            """,
+            (f"%{query}%", limit),
+        ).fetchall()
