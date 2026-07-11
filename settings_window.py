@@ -217,18 +217,6 @@ class SettingsWindow(Gtk.Window):
         self.save_button.set_sensitive(False)
 
 
-def on_show_ca_qr_clicked(self, _button):
-    settings = load_settings()
-    url = f"https://{settings['last_known_ip']}:{settings['port']}/setup-ca"
-    image_path = generate_qr_for_url(url, "ca-setup")
-
-    popup = Gtk.Window(title="Scan to trust ClipQR on this device")
-    popup.set_default_size(320, 360)
-    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(image_path, 280, 280, True)
-    image = Gtk.Image.new_from_pixbuf(pixbuf)
-    popup.add(image)
-    popup.show_all()
-
 
 def _standalone_test():
     win = SettingsWindow()

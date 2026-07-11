@@ -135,14 +135,7 @@ class HistoryWindow(Gtk.Window):
         for child in self.list_box.get_children():
             self.list_box.remove(child)
 
-        # pinned_entries = get_pinned_entries()
-        # if pinned_entries:
-        #     self.pinned_label.show()
-        #     for entry in pinned_entries:
-        #         row = self._build_row(entry, is_pinned=True, previous_entry=None)
-        #         self.pinned_list_box.add(row)
-        # else:
-        #     self.pinned_label.hide()
+
 
         query = self._get_search_query()
 
@@ -155,16 +148,7 @@ class HistoryWindow(Gtk.Window):
             local_entries = [e for e in recent_entries if e["origin"] == "local"]
             synced_entries = [e for e in recent_entries if e["origin"] != "local"]
 
-        # recent_entries = get_recent_unpinned(limit=load_settings()["history_limit"])
 
-        # local_entries = [e for e in recent_entries if e["origin"] == "local"]
-        # synced_entries = [e for e in recent_entries if e["origin"] != "local"]
-
-        # if not local_entries:
-        #     empty_label = Gtk.Label(label="No clipboard history yet.")
-        #     empty_label.set_margin_top(20)
-        #     self.list_box.add(empty_label)
-        #
         if not query:
             pinned_entries = get_pinned_entries()
             if pinned_entries:
@@ -203,25 +187,7 @@ class HistoryWindow(Gtk.Window):
 
         self.synced_list_box.show_all()
 
-        # recent_entries = get_recent_unpinned(limit=load_settings()["history_limit"])
-        # if not recent_entries:
-        #     empty_label = Gtk.Label(label="No clipboard history yet.")
-        #     empty_label.set_margin_top(20)
-        #     self.list_box.add(empty_label)
-        # else:
-        #     for index, entry in enumerate(recent_entries):
-        #         previous_entry = (
-        #             recent_entries[index + 1]
-        #             if index + 1 < len(recent_entries)
-        #             else None
-        #         )
-        #         row = self._build_row(
-        #             entry, is_pinned=False, previous_entry=previous_entry
-        #         )
-        #         self.list_box.add(row)
-            # for entry in recent_entries:
-            #     row = self._build_row(entry, is_pinned=False)
-            #     self.list_box.add(row)
+
 
         self.pinned_list_box.show_all()
         self.list_box.show_all()
@@ -277,10 +243,7 @@ class HistoryWindow(Gtk.Window):
             origin_label = Gtk.Label(label=f"↴ {peer_label_text}")
             origin_label.get_style_context().add_class("dim-label")
             row_box.pack_start(origin_label, False, False, 0)
-        # if badge_text:
-        #     badge_label = Gtk.Label(label=badge_text)
-        #     badge_label.get_style_context().add_class("dim-label")
-        #     row_box.pack_start(badge_label, False, False, 0)
+
 
         # --- NEW: time label + stale icon, grouped in their own small box ---
         time_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
@@ -350,61 +313,7 @@ class HistoryWindow(Gtk.Window):
         row.add(row_box)
         return row
 
-    # def _build_row(self, entry, is_pinned: bool) -> Gtk.ListBoxRow:
-    #     row = Gtk.ListBoxRow()
-    #     row_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-    #     row_box.set_margin_top(4)
-    #     row_box.set_margin_bottom(4)
-    #     row_box.set_margin_start(6)
-    #     row_box.set_margin_end(6)
 
-    #     badge_text = self._format_badge(entry["content_type"])
-    #     if badge_text:
-    #         badge_label = Gtk.Label(label=badge_text)
-    #         badge_label.get_style_context().add_class("dim-label")
-    #         row_box.pack_start(badge_label, False, False, 0)
-
-    #     time_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
-    #     stale = is_stale(entry["created_at"])
-    #     if stale:
-    #         stale_icon = Gtk.Image.new_from_icon_name(
-    #             "alarm-symbolic", Gtk.IconSize.MENU
-    #         )
-    #         stale_icon.set_tooltip_text("This entry may be stale")
-    #         time_box.pack_start(stale_icon, False, False, 0)
-
-    #     time_label = Gtk.Label(label=format_relative_time(entry["created_at"]))
-    #     time_label.get_style_context().add_class("dim-label")
-    #     time_box.pack_start(time_label, False, False, 0)
-    #     row_box.pack_start(time_box, False, False, 0)
-
-    #     text_label = Gtk.Label(label=truncate(entry["content"]))
-    #     text_label.set_xalign(0)
-    #     text_label.set_hexpand(True)
-    #     text_label.set_ellipsize(3)
-
-    #     pin_icon = "starred-symbolic" if is_pinned else "non-starred-symbolic"
-    #     pin_tooltip = "Unpin" if is_pinned else "Pin (max 5)"
-    #     pin_button = self._icon_button(pin_icon, pin_tooltip)
-    #     pin_button.connect("clicked", self._make_pin_handler(entry, is_pinned))
-
-    #     qr_button = self._icon_button("view-grid-symbolic", "Show QR code")
-    #     qr_button.connect("clicked", self._make_qr_handler(entry))
-
-    #     copy_button = self._icon_button("edit-copy-symbolic", "Copy to clipboard")
-    #     copy_button.connect("clicked", self._make_copy_handler(entry))
-
-    #     delete_button = self._icon_button("user-trash-symbolic", "Delete entry")
-    #     delete_button.connect("clicked", self._make_delete_handler(entry))
-
-    #     row_box.pack_start(text_label, True, True, 0)
-    #     row_box.pack_end(delete_button, False, False, 0)
-    #     row_box.pack_end(copy_button, False, False, 0)
-    #     row_box.pack_end(qr_button, False, False, 0)
-    #     row_box.pack_end(pin_button, False, False, 0)
-
-    #     row.add(row_box)
-    #     return row
 
     def _icon_button(self, icon_name, tooltip):
         button = Gtk.Button()
@@ -440,13 +349,7 @@ class HistoryWindow(Gtk.Window):
 
         return handler
 
-    # def _make_copy_handler(self, entry):
-    #     def handler(_button):
-    #         pyperclip.copy(entry["content"])
-    #         add_entry(entry["content"])
-    #         self.refresh()
 
-    #     return handler
 
     def _make_delete_handler(self, entry):
         def handler(_button):

@@ -44,26 +44,6 @@ def init_db():
             cur.execute("ALTER TABLE history ADD COLUMN origin TEXT DEFAULT 'local'")
 
 
-# def init_db():
-#     with get_connection() as conn:
-#         cur = conn.cursor()
-#         cur.execute(
-#             "CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY,content TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, pinned BOOLEAN DEFAULT 0)"
-#         )
-#         cur.execute("PRAGMA table_info(history)")
-#         columns = [row["name"] for row in cur.fetchall()]
-#         if "pinned_at" not in columns:
-#             cur.execute(
-#                 "ALTER TABLE history ADD COLUMN pinned_at DATETIME DEFAULT NULL"
-#             )
-#         if "content_type" not in columns:
-#             cur.execute("ALTER TABLE history ADD COLUMN content_type TEXT DEFAULT NULL")
-#         if "self_destruct" not in columns:
-#             cur.execute(
-#                 "ALTER TABLE history ADD COLUMN self_destruct BOOLEAN DEFAULT 0"
-#             )
-
-
 def get_local_entries_since(since_timestamp: str, exclude_origin: str = None):
     """
     Returns entries that:
