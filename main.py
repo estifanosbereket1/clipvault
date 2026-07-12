@@ -4,6 +4,7 @@ import threading
 import gi
 import uvicorn
 
+
 from clipboard_monitor import start_monitoring
 from history_window import HistoryWindow, open_qr_popup
 from hotkey import setup_signal_listener
@@ -19,6 +20,9 @@ from peer_sync import start_sync_loop
 
 from peer_window import PeerWindow
 
+from settings_store import load_settings
+from theme_manager import apply_theme
+
 
 
 gi.require_version("Gtk", "3.0")
@@ -30,6 +34,12 @@ def main():
 
     from cert_manager import get_cert_dir, regenerate_cert_for_ip
     from settings_store import check_ip_changed, load_settings, save_settings
+
+    # apply_theme(load_settings()["palette"])
+    from theme_manager import apply_theme_for_current_system_mode, watch_system_theme_changes
+
+    apply_theme_for_current_system_mode()
+    theme_watcher = watch_system_theme_changes()
 
     changed, old_ip, new_ip = check_ip_changed()
     if changed and new_ip:

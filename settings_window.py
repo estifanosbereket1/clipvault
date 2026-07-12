@@ -2,6 +2,9 @@ import gi
 
 from qr_popup import generate_qr_for_url
 
+from palette_picker import PalettePicker
+from theme_manager import get_system_theme_is_dark
+
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 
@@ -21,19 +24,21 @@ SHORTCUT_COMMAND = "kill -SIGUSR1 $(cat /tmp/clipqr.pid)"
 class SettingsWindow(Gtk.Window):
     def __init__(self):
         super().__init__(title="ClipQR Settings")
-        self.set_default_size(360, 220)
+        self.set_default_size(420, 560)
         self.set_position(Gtk.WindowPosition.CENTER)
-        self.set_resizable(False)
 
-        # So the window actually receives key-press-event
         self.set_can_focus(True)
         self.connect("key-press-event", self.on_key_press)
 
         self.captured_accelerator = None
 
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        self.add(scrolled)
+
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
         outer.set_border_width(20)
-        self.add(outer)
+        scrolled.add(outer)
 
         self.instructions_label = Gtk.Label(
             label="Click the field below, then press your desired\nkey combination for opening ClipQR."
@@ -71,50 +76,77 @@ class SettingsWindow(Gtk.Window):
 
         # History limit
         history_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        history_row.pack_start(Gtk.Label(label="History limit:"), False, False, 0)
+        history_label = Gtk.Label(label="History limit:")
+        history_label.set_xalign(0)
+        history_label.set_hexpand(True)
+        history_row.pack_start(history_label, True, True, 0)
         history_adj = Gtk.Adjustment(
             value=app_settings["history_limit"], lower=1, upper=1000, step_increment=1
         )
         self.history_spin = Gtk.SpinButton()
         self.history_spin.set_adjustment(history_adj)
-        history_row.pack_start(self.history_spin, False, False, 0)
+        history_row.pack_end(self.history_spin, False, False, 0)
         outer.pack_start(history_row, False, False, 0)
 
         # Poll interval
         poll_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        poll_row.pack_start(Gtk.Label(label="Poll interval (sec):"), False, False, 0)
+        poll_label = Gtk.Label(label="Poll interval (sec):")
+        poll_label.set_xalign(0)
+        poll_label.set_hexpand(True)
+        poll_row.pack_start(poll_label, True, True, 0)
         poll_adj = Gtk.Adjustment(
             value=app_settings["poll_interval"], lower=0.2, upper=10, step_increment=0.1
         )
         self.poll_spin = Gtk.SpinButton()
         self.poll_spin.set_adjustment(poll_adj)
-        self.poll_spin.set_digits(1)  # allow one decimal place
-        poll_row.pack_start(self.poll_spin, False, False, 0)
+        self.poll_spin.set_digits(1)
+        poll_row.pack_end(self.poll_spin, False, False, 0)
         outer.pack_start(poll_row, False, False, 0)
 
         # Port
         port_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        port_row.pack_start(Gtk.Label(label="Server port:"), False, False, 0)
+        port_label = Gtk.Label(label="Server port:")
+        port_label.set_xalign(0)
+        port_label.set_hexpand(True)
+        port_row.pack_start(port_label, True, True, 0)
         port_adj = Gtk.Adjustment(
             value=app_settings["port"], lower=1024, upper=65535, step_increment=1
         )
         self.port_spin = Gtk.SpinButton()
         self.port_spin.set_adjustment(port_adj)
-        port_row.pack_start(self.port_spin, False, False, 0)
+        port_row.pack_end(self.port_spin, False, False, 0)
         outer.pack_start(port_row, False, False, 0)
 
+        # Playback mode
         playback_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        playback_row.pack_start(Gtk.Label(label="Playback mode:"), False, False, 0)
+        playback_label = Gtk.Label(label="Playback mode:")
+        playback_label.set_xalign(0)
+        playback_label.set_hexpand(True)
+        playback_row.pack_start(playback_label, True, True, 0)
 
         self.playback_combo = Gtk.ComboBoxText()
         self.playback_combo.append("time", "Visual timeline (fun)")
         self.playback_combo.append("index", "Simple slider")
         self.playback_combo.set_active_id(app_settings.get("playback_mode", "time"))
-
-        playback_row.pack_start(self.playback_combo, False, False, 0)
+        playback_row.pack_end(self.playback_combo, False, False, 0)
         outer.pack_start(playback_row, False, False, 0)
 
-        # Save button + status
+        system_is_dark = get_system_theme_is_dark()
+        current_key = "dark_palette" if system_is_dark else "light_palette"
+        current_palette = app_settings.get(current_key, "midnight" if system_is_dark else "daylight")
+
+        self.palette_picker = PalettePicker(
+            current_palette=current_palette,
+            on_selected=lambda key: None,
+        )
+        outer.pack_start(self.palette_picker, False, False, 0)
+
+        # self.palette_picker = PalettePicker(
+        #     current_palette=app_settings.get("palette", "midnight"),
+        #     on_selected=lambda key: None,
+        # )
+        # outer.pack_start(self.palette_picker, False, False, 0)
+
         self.settings_status_label = Gtk.Label(label="")
         outer.pack_start(self.settings_status_label, False, False, 0)
 
@@ -158,18 +190,37 @@ class SettingsWindow(Gtk.Window):
             "poll_interval": round(self.poll_spin.get_value(), 1),
             "port": self.port_spin.get_value_as_int(),
             "playback_mode": self.playback_combo.get_active_id(),
+            self.palette_picker.settings_key: self.palette_picker.selected_palette,
         }
         errors = save_settings(new_values)
         if errors:
             self.settings_status_label.set_text("\n".join(errors))
         else:
+            from theme_manager import apply_theme_for_current_system_mode
+            apply_theme_for_current_system_mode()
             self.settings_status_label.set_text(
                 "Saved. Poll interval and port changes require an app restart."
             )
 
+    # def on_save_settings_clicked(self, _button):
+    #     new_values = {
+    #         "history_limit": self.history_spin.get_value_as_int(),
+    #         "poll_interval": round(self.poll_spin.get_value(), 1),
+    #         "port": self.port_spin.get_value_as_int(),
+    #         "playback_mode": self.playback_combo.get_active_id(),
+    #         "palette": self.palette_picker.selected_palette,
+    #     }
+    #     errors = save_settings(new_values)
+    #     if errors:
+    #         self.settings_status_label.set_text("\n".join(errors))
+    #     else:
+    #         from theme_manager import apply_theme
+    #         apply_theme(new_values["palette"])
+    #         self.settings_status_label.set_text(
+    #             "Saved. Poll interval and port changes require an app restart."
+    #         )
+
     def on_key_press(self, _widget, event):
-        # Ignore lone modifier presses (Ctrl/Alt/Shift/Super by themselves) --
-        # we only want to capture once a real key is pressed alongside them.
         modifier_keyvals = (
             Gdk.KEY_Control_L,
             Gdk.KEY_Control_R,
@@ -191,7 +242,7 @@ class SettingsWindow(Gtk.Window):
 
         conflict = is_combo_taken(accelerator)
         if conflict and accelerator == self.current_binding:
-            conflict = None  # it's just our own existing binding, not a real conflict
+            conflict = None
 
         if conflict:
             self.status_label.set_text(f"Already used by: {conflict}")
@@ -200,7 +251,7 @@ class SettingsWindow(Gtk.Window):
             self.status_label.set_text("Available")
             self.save_button.set_sensitive(True)
 
-        return True  # stop this key event from propagating further
+        return True
 
     def on_save_clicked(self, _button):
         if not self.captured_accelerator:
@@ -215,7 +266,6 @@ class SettingsWindow(Gtk.Window):
         self.current_binding = self.captured_accelerator
         self.current_label.set_text(f"Currently set to: {self.current_binding}")
         self.save_button.set_sensitive(False)
-
 
 
 def _standalone_test():

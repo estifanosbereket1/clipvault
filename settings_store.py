@@ -9,6 +9,9 @@ DEFAULTS = {
     "port": 8000,
     "last_known_ip": None,
     "playback_mode": "time",
+    # "palette": "midnight",
+    "dark_palette": "midnight",
+    "light_palette": "daylight",
 }
 
 # Bounds used for validation when saving.
@@ -92,6 +95,12 @@ def validate_settings(new_values: dict) -> list[str]:
     if "playback_mode" in new_values:
         if new_values["playback_mode"] not in ("time", "index"):
             errors.append("Playback mode must be 'time' or 'index'.")
+
+    if "dark_palette" in new_values or "light_palette" in new_values:
+        from palettes import PALETTES
+        for key in ("dark_palette", "light_palette"):
+            if key in new_values and new_values[key] not in PALETTES:
+                errors.append(f"Unknown palette selected for {key}.")
 
     return errors
 

@@ -1,5 +1,7 @@
 import gi
 
+from theme_manager import get_active_palette
+
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
@@ -31,10 +33,13 @@ class DiffPopup(Gtk.Window):
         text_view.set_monospace(True)
         buffer = text_view.get_buffer()
 
-        buffer.create_tag("add", foreground="#4caf50")
-        buffer.create_tag("remove", foreground="#f44336")
-        buffer.create_tag("modified", foreground="#ff9800")
-        buffer.create_tag("same", foreground="#9e9e9e")
+        palette = get_active_palette()
+        buffer.create_tag("add", foreground=palette["diff_add"])
+        buffer.create_tag("remove", foreground=palette["diff_remove"])
+        buffer.create_tag("modified", foreground=palette["diff_modified"])
+        buffer.create_tag("same", foreground=palette["muted"])
+
+
 
         for line_type, content in result["lines"]:
             marker = {"add": "+ ", "remove": "- ", "same": "  ", "modified": "~ "}[
