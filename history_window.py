@@ -283,13 +283,21 @@ class HistoryWindow(Gtk.Window):
         pin_button = self._icon_button(pin_icon, pin_tooltip)
         pin_button.connect("clicked", self._make_pin_handler(entry, is_pinned))
 
-        burn_icon = "flame"
+        burn_icon = "flame-active" if entry["self_destruct"] else "flame"
         burn_tooltip = (
             "Self-destruct: ON (copy will auto-delete + wipe clipboard)"
             if entry["self_destruct"]
             else "Mark as self-destruct"
         )
         burn_button = self._icon_button(burn_icon, burn_tooltip)
+
+        # burn_icon = "flame"
+        # burn_tooltip = (
+        #     "Self-destruct: ON (copy will auto-delete + wipe clipboard)"
+        #     if entry["self_destruct"]
+        #     else "Mark as self-destruct"
+        # )
+        # burn_button = self._icon_button(burn_icon, burn_tooltip)
 
 
         burn_button.connect("clicked", self._make_burn_toggle_handler(entry))
