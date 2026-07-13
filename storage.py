@@ -12,8 +12,8 @@ FUZZY_MATCH_THRESHOLD = 60
 
 def get_db_path():
     base_path = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
-    db_path = base_path + "/clipqr/history.db"
-    os.makedirs(f"{base_path}/clipqr", exist_ok=True)
+    db_path = base_path + "/clipvault/history.db"
+    os.makedirs(f"{base_path}/clipvault", exist_ok=True)
     return Path(db_path)
 
 

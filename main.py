@@ -1,4 +1,5 @@
 import os
+import subprocess
 import threading
 
 import gi
@@ -114,6 +115,57 @@ def main():
             },
             daemon=True,
         ).start()
+
+        def on_uninstall_clicked():
+            confirm = Gtk.MessageDialog(
+                transient_for=None,
+                flags=0,
+                message_type=Gtk.MessageType.WARNING,
+                buttons=Gtk.ButtonsType.YES_NO,
+                text="Uninstall ClipVault?",
+            )
+            confirm.format_secondary_text(
+                "This will open a terminal to walk you through uninstalling. "
+                "You'll be asked whether to keep your clipboard history and settings."
+            )
+            response = confirm.run()
+            confirm.destroy()
+
+            if response != Gtk.ResponseType.YES:
+                return
+
+            project_dir = os.path.dirname(os.path.abspath(__file__))
+            uninstall_script = os.path.join(project_dir, "uninstall.sh")
+
+            terminal_launched = False
+            for terminal_cmd in (
+                ["gnome-terminal", "--", "bash", uninstall_script],
+                ["x-terminal-emulator", "-e", f"bash {uninstall_script}"],
+                ["xterm", "-e", f"bash {uninstall_script}"],
+            ):
+                try:
+                    subprocess.Popen(terminal_cmd)
+                    terminal_launched = True
+                    break
+                except FileNotFoundError:
+                    continue
+
+            if not terminal_launched:
+                fallback = Gtk.MessageDialog(
+                    transient_for=None,
+                    flags=0,
+                    message_type=Gtk.MessageType.ERROR,
+                    buttons=Gtk.ButtonsType.OK,
+                    text="Couldn't open a terminal automatically.",
+                )
+                fallback.format_secondary_text(
+                    f"Please run this manually:\nbash {uninstall_script}"
+                )
+                fallback.run()
+                fallback.destroy()
+                return
+
+            quit_app()
 
         def on_peer_found(name, ip, port):
             my_ip = settings.get("last_known_ip")
