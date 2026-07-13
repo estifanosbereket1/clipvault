@@ -4,7 +4,7 @@ import signal
 
 def setup_signal_listener(on_triggered):
     pid = os.getpid()
-    with open("/tmp/clipqr.pid", "w") as f:
+    with open("/tmp/clipvault.pid", "w") as f:
         f.write(str(pid))
 
     def handle_signal(signum, frame):

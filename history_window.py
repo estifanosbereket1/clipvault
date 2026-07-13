@@ -59,7 +59,7 @@ def truncate(text: str, max_len: int = 60) -> str:
 
 class HistoryWindow(Gtk.Window):
     def __init__(self, on_qr_clicked=None):
-        super().__init__(title="Clipboard History")
+        super().__init__(title="ClipVault History")
         self.compare_mode = False
         self.selected_for_compare = []
         self.on_qr_clicked = on_qr_clicked

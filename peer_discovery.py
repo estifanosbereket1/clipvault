@@ -2,7 +2,7 @@ import socket
 from zeroconf import ServiceInfo, Zeroconf, ServiceBrowser, ServiceListener
 from settings_store import get_current_lan_ip, load_settings
 
-SERVICE_TYPE = "_clipqr._tcp.local."
+SERVICE_TYPE = "_clipvault._tcp.local."
 
 
 def advertise_self(port: int, hostname_label: str) -> tuple[Zeroconf, ServiceInfo]:

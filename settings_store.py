@@ -39,7 +39,7 @@ def get_current_lan_ip() -> str | None:
 
 def get_settings_path() -> Path:
     base_path = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
-    config_dir = Path(base_path) / "clipqr"
+    config_dir = Path(base_path) / "clipvault"
     os.makedirs(config_dir, exist_ok=True)
     return config_dir / "settings.json"
 

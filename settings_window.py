@@ -17,13 +17,13 @@ from gnome_shortcuts import (
 )
 from settings_store import load_settings, save_settings
 
-SHORTCUT_NAME = "Open ClipQR"
-SHORTCUT_COMMAND = "kill -SIGUSR1 $(cat /tmp/clipqr.pid)"
+SHORTCUT_NAME = "Open ClipVault"
+SHORTCUT_COMMAND = "kill -SIGUSR1 $(cat /tmp/clipvault.pid)"
 
 
 class SettingsWindow(Gtk.Window):
     def __init__(self):
-        super().__init__(title="ClipQR Settings")
+        super().__init__(title="ClipVault Settings")
         self.set_default_size(420, 560)
         self.set_position(Gtk.WindowPosition.CENTER)
 

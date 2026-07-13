@@ -212,7 +212,7 @@ def main():
         setup_signal_listener(on_hotkey_triggered)
 
         def quit_app():
-            pid_file = "/tmp/clipqr.pid"
+            pid_file = "/tmp/clipvault.pid"
             if os.path.exists(pid_file):
                 os.remove(pid_file)
             Gtk.main_quit()

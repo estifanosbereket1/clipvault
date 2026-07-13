@@ -9,7 +9,7 @@ from peer_store import get_pending_peers, get_paired_peers, get_ignored_peers, s
 
 class PeerWindow(Gtk.Window):
     def __init__(self):
-        super().__init__(title="ClipQR Peers")
+        super().__init__(title="ClipVault Peers")
         self.set_default_size(420, 400)
         self.set_position(Gtk.WindowPosition.CENTER)
 

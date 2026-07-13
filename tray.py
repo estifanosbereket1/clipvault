@@ -16,7 +16,7 @@ def setup_tray_icon(on_open, on_settings, on_playback, on_peers, on_quit, on_che
     if it gets garbage collected, the tray icon can disappear.
     """
     indicator = AyatanaAppIndicator3.Indicator.new(
-        "clipqr",
+        "clipvault",
         "edit-copy",
         AyatanaAppIndicator3.IndicatorCategory.APPLICATION_STATUS,
     )

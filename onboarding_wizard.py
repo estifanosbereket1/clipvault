@@ -408,8 +408,8 @@ class OnboardingWizard(Gtk.Window):
 
         if self.captured_hotkey_accelerator:
             register_custom_shortcut(
-                name="Open ClipQR",
-                shell_command="kill -SIGUSR1 $(cat /tmp/clipqr.pid)",
+                name="Open ClipVault",
+                shell_command="kill -SIGUSR1 $(cat /tmp/clipvault.pid)",
                 accelerator=self.captured_hotkey_accelerator,
             )
 

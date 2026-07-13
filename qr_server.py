@@ -23,7 +23,7 @@ def get_clipboard_page(entry_id: int):
     <html>
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title>ClipQR</title>
+      <title>ClipVault</title>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
       <style>
         :root {{
@@ -337,5 +337,5 @@ def get_ca_certificate():
     return FileResponse(
         path=ca_path,
         media_type="application/x-x509-ca-cert",
-        filename="clipqr-ca.pem",
+        filename="clipvault-ca.pem",
     )
