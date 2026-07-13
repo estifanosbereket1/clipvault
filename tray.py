@@ -5,7 +5,7 @@ gi.require_version("AyatanaAppIndicator3", "0.1")
 from gi.repository import AyatanaAppIndicator3, Gtk
 
 
-def setup_tray_icon(on_open, on_settings, on_playback, on_peers, on_quit):
+def setup_tray_icon(on_open, on_settings, on_playback, on_peers, on_quit, on_check_updates):
     """
     Creates and shows the system tray icon with a right-click menu:
       - Open Clipboard History -> calls on_open()
@@ -42,6 +42,10 @@ def setup_tray_icon(on_open, on_settings, on_playback, on_peers, on_quit):
     peers_item = Gtk.MenuItem(label="Peer Devices")
     peers_item.connect("activate", lambda _item: on_peers())
     menu.append(peers_item)
+
+    update_item = Gtk.MenuItem(label="Check for Updates")
+    update_item.connect("activate", lambda _item: on_check_updates())
+    menu.append(update_item)
 
     quit_item = Gtk.MenuItem(label="Quit")
     quit_item.connect("activate", lambda _item: on_quit())

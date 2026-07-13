@@ -54,6 +54,52 @@ def main():
         cert_path = str(cert_dir / "cert.pem")
         key_path = str(cert_dir / "key.pem")
 
+        def on_check_updates():
+            from update_checker import check_for_update
+            result = check_for_update()
+
+            dialog = Gtk.MessageDialog(
+                transient_for=None,
+                flags=0,
+                message_type=Gtk.MessageType.INFO,
+                buttons=Gtk.ButtonsType.OK,
+            )
+
+            if result["error"]:
+                dialog.set_property("text", "Couldn't check for updates.")
+                dialog.format_secondary_text(result["error"])
+                dialog.run()
+                dialog.destroy()
+                return
+
+            if not result["update_available"]:
+                dialog.set_property("text", "You're up to date.")
+                dialog.format_secondary_text(f"Version {result['local_version']}")
+                dialog.run()
+                dialog.destroy()
+                return
+
+            dialog.destroy()
+
+            confirm = Gtk.MessageDialog(
+                transient_for=None,
+                flags=0,
+                message_type=Gtk.MessageType.QUESTION,
+                buttons=Gtk.ButtonsType.YES_NO,
+                text=f"Update available: v{result['latest_version']}",
+            )
+            confirm.format_secondary_text(
+                f"You're on v{result['local_version']}. Update now? "
+                "ClipQR will restart automatically; your clipboard history and settings are kept."
+            )
+            response = confirm.run()
+            confirm.destroy()
+
+            if response == Gtk.ResponseType.YES:
+                from update_checker import perform_update
+                perform_update()
+                quit_app()
+
         def open_playback():
             PlaybackWindow()
 
@@ -131,6 +177,7 @@ def main():
             on_playback=open_playback,
             on_peers=open_peers,
             on_quit=quit_app,
+            on_check_updates=on_check_updates,
         )
         app_refs["indicator"] = indicator
 
