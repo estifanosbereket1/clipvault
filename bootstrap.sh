@@ -25,4 +25,4 @@ else
 fi
 
 chmod +x install.sh
-./install.sh
+./install.sh < /dev/tty
