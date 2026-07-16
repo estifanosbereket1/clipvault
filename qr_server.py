@@ -1,13 +1,216 @@
 import html
 import json
+import os
 import subprocess
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 
-from storage import get_entry_by_id, get_local_entries_since
+from storage import add_entry, get_entry_by_id, get_local_entries_since
+
+_on_phone_content_received = None
+
+
+def set_phone_content_callback(callback):
+    global _on_phone_content_received
+    _on_phone_content_received = callback
+
+
+def notify_content_received():
+    if _on_phone_content_received:
+        _on_phone_content_received()
 
 app = FastAPI()
+
+@app.get("/manifest.json")
+def get_manifest():
+    manifest = {
+        "name": "ClipVault Send",
+        "short_name": "ClipVault",
+        "start_url": "/send",
+        "display": "standalone",
+        "background_color": "#0f1115",
+        "theme_color": "#0f1115",
+        "icons": [
+            {
+                "src": "/icon-192.png",
+                "sizes": "192x192",
+                "type": "image/png"
+            }
+        ]
+    }
+    return manifest
+
+@app.get("/icon-192.png")
+def get_app_icon():
+    icon_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "assets", "icons", "app-icon.png"
+    )
+    return FileResponse(icon_path, media_type="image/png")
+
+@app.get("/send")
+def get_send_page():
+    formatted_content = """<!DOCTYPE html>
+    <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <link rel="manifest" href="/manifest.json">
+      <meta name="theme-color" content="#0f1115">
+      <link rel="apple-touch-icon" href="/icon-192.png">
+      <title>ClipVault</title>
+      <style>
+        :root {
+          --bg: #0f1115;
+          --card: #1a1d24;
+          --border: #2a2e37;
+          --text: #e8e9ec;
+          --muted: #8b8f9a;
+          --accent: #5b8cff;
+          --success: #34d399;
+          --error: #f87171;
+        }
+        * { box-sizing: border-box; }
+        body {
+          margin: 0;
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--bg);
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          padding: 24px;
+        }
+        .card {
+          width: 100%;
+          max-width: 420px;
+          background: var(--card);
+          border: 1px solid var(--border);
+          border-radius: 16px;
+          padding: 28px 24px;
+        }
+        .label {
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: var(--muted);
+          margin: 0 0 10px;
+        }
+        textarea {
+          width: 100%;
+          min-height: 140px;
+          background: #101319;
+          border: 2px solid var(--border);
+          border-radius: 10px;
+          padding: 14px;
+          color: var(--text);
+          font-size: 15px;
+          font-family: inherit;
+          resize: vertical;
+          margin-bottom: 16px;
+        }
+        textarea:focus {
+          outline: none;
+          border-color: var(--accent);
+        }
+        #status {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          color: var(--muted);
+          min-height: 20px;
+          margin: 0 0 14px;
+        }
+        #status.success { color: var(--success); }
+        #status.error { color: var(--error); }
+        .dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: var(--muted);
+          flex-shrink: 0;
+        }
+        #status.success .dot { background: var(--success); }
+        #status.error .dot { background: var(--error); }
+        button {
+          width: 100%;
+          padding: 13px;
+          border-radius: 10px;
+          border: none;
+          background: var(--accent);
+          color: white;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+        button:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <p class="label">Send to computer</p>
+        <textarea id="content" placeholder="Type or paste something..." autofocus></textarea>
+        <p id="status"><span class="dot"></span><span id="status-text"></span></p>
+        <button id="send-btn" onclick="sendContent()">Send</button>
+      </div>
+      <script>
+        const textarea = document.getElementById("content");
+        const statusEl = document.getElementById("status");
+        const statusText = document.getElementById("status-text");
+        const sendBtn = document.getElementById("send-btn");
+
+        async function sendContent() {
+          const value = textarea.value.trim();
+          if (!value) {
+            statusEl.className = "error";
+            statusText.innerText = "Nothing to send.";
+            return;
+          }
+
+          sendBtn.disabled = true;
+          statusEl.className = "";
+          statusText.innerText = "Sending...";
+
+          try {
+            const response = await fetch("/send", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ content: value }),
+            });
+
+            if (!response.ok) throw new Error("Server error");
+
+            statusEl.className = "success";
+            statusText.innerText = "Sent to computer";
+            textarea.value = "";
+          } catch (err) {
+            statusEl.className = "error";
+            statusText.innerText = "Couldn't send. Try again.";
+          } finally {
+            sendBtn.disabled = false;
+          }
+        }
+      </script>
+    </body>
+    </html>"""
+    return HTMLResponse(content=formatted_content)
+
+
+@app.post("/send")
+async def post_send_content(request: Request):
+    body = await request.json()
+    content = body.get("content", "").strip()
+
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty content")
+
+    add_entry(content, origin="phone")
+    notify_content_received()
+
+    return {"ok": True}
 
 @app.get("/c/{entry_id}")
 def get_clipboard_page(entry_id: int):
@@ -139,6 +342,11 @@ def get_clipboard_page(entry_id: int):
         <button id="qr-btn" class="secondary" onclick="showAsQr()">Show as QR (for another device)</button>
         <p id="qr-warning">This content is long -- the QR code may be dense or hard to scan.</p>
         <div id="qr-output"></div>
+        <div style="text-align: center; margin-top: 16px;">
+          <a href="/send" style="color: var(--accent); font-size: 13px; text-decoration: none;">
+            Send something back to your computer →
+          </a>
+        </div>
       </div>
       <script>
         const clipboardText = {js_content};

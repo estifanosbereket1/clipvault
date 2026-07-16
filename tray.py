@@ -1,5 +1,3 @@
-
-
 import os
 
 import gi
@@ -9,7 +7,7 @@ gi.require_version("AyatanaAppIndicator3", "0.1")
 from gi.repository import AyatanaAppIndicator3, Gtk
 
 
-def setup_tray_icon(on_open, on_settings, on_playback, on_peers, on_quit, on_check_updates, on_about, on_uninstall):
+def setup_tray_icon(on_open, on_settings, on_playback, on_peers,on_send_from_phone, on_quit, on_check_updates, on_about, on_uninstall):
     indicator = AyatanaAppIndicator3.Indicator.new(
         "clipvault",
         "edit-copy",
@@ -34,6 +32,10 @@ def setup_tray_icon(on_open, on_settings, on_playback, on_peers, on_quit, on_che
     peers_item = Gtk.MenuItem(label="Peer Devices")
     peers_item.connect("activate", lambda _item: on_peers())
     menu.append(peers_item)
+
+    send_item = Gtk.MenuItem(label="Send from Phone")
+    send_item.connect("activate", lambda _item: on_send_from_phone())
+    menu.append(send_item)
 
     menu.append(Gtk.SeparatorMenuItem())
 

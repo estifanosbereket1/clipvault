@@ -165,12 +165,43 @@ class SettingsWindow(Gtk.Window):
         ca_instructions.set_justify(Gtk.Justification.CENTER)
         outer.pack_start(ca_instructions, False, False, 0)
 
+        send_qr_button = Gtk.Button(label="Show 'Send from Phone' QR")
+        send_qr_button.connect("clicked", self.on_show_send_qr_clicked)
+        outer.pack_start(send_qr_button, False, False, 0)
+
         ca_qr_button = Gtk.Button(label="Show CA Setup QR")
         ca_qr_button.connect("clicked", self.on_show_ca_qr_clicked)
         outer.pack_start(ca_qr_button, False, False, 0)
 
         self.show_all()
         self.grab_focus()
+
+    def on_show_send_qr_clicked(self, _button):
+        settings = load_settings()
+        url = f"https://{settings['last_known_ip']}:{settings['port']}/send"
+        image_path = generate_qr_for_url(url, "send-from-phone")
+
+        popup = Gtk.Window(title="Scan to send from your phone")
+        popup.set_default_size(320, 380)
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.set_border_width(16)
+
+        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(image_path, 280, 280, True)
+        image = Gtk.Image.new_from_pixbuf(pixbuf)
+        box.pack_start(image, True, True, 0)
+
+        hint = Gtk.Label(
+            label="After scanning, use your browser's \"Add to Home Screen\" "
+                  "option to install this as an app for quick access later."
+        )
+        hint.set_line_wrap(True)
+        hint.set_justify(Gtk.Justification.CENTER)
+        hint.set_margin_top(10)
+        box.pack_start(hint, False, False, 0)
+
+        popup.add(box)
+        popup.show_all()
 
     def on_show_ca_qr_clicked(self, _button):
         settings = load_settings()

@@ -187,8 +187,10 @@ class HistoryWindow(Gtk.Window):
             synced_entries = [e for e in matched_entries if e["origin"] != "local"]
         else:
             recent_entries = get_recent_unpinned(limit=load_settings()["history_limit"])
-            local_entries = [e for e in recent_entries if e["origin"] == "local"]
-            synced_entries = [e for e in recent_entries if e["origin"] != "local"]
+            # local_entries = [e for e in recent_entries if e["origin"] == "local"]
+            # synced_entries = [e for e in recent_entries if e["origin"] != "local"]
+            local_entries = [e for e in recent_entries if e["origin"] in ("local", "phone")]
+            synced_entries = [e for e in recent_entries if e["origin"] not in ("local", "phone")]
 
 
         if not query:
@@ -281,9 +283,19 @@ class HistoryWindow(Gtk.Window):
         row_box.set_margin_end(6)
 
         # --- badge ---
-        badge_text = self._format_badge(entry["content_type"])
-        if entry["origin"] != "local":
-            peer_label_text = entry["origin"].split(".")[0]  # strip the .local. suffix etc, just show hostname
+        # badge_text = self._format_badge(entry["content_type"])
+        # if entry["origin"] != "local":
+        #     peer_label_text = entry["origin"].split(".")[0]  # strip the .local. suffix etc, just show hostname
+        #     origin_label = Gtk.Label(label=f"↴ {peer_label_text}")
+        #     origin_label.get_style_context().add_class("dim-label")
+        #     row_box.pack_start(origin_label, False, False, 0)
+        #
+        if entry["origin"] == "phone":
+            origin_label = Gtk.Label(label="📱 from phone")
+            origin_label.get_style_context().add_class("dim-label")
+            row_box.pack_start(origin_label, False, False, 0)
+        elif entry["origin"] != "local":
+            peer_label_text = entry["origin"].split(".")[0]
             origin_label = Gtk.Label(label=f"↴ {peer_label_text}")
             origin_label.get_style_context().add_class("dim-label")
             row_box.pack_start(origin_label, False, False, 0)
@@ -357,86 +369,7 @@ class HistoryWindow(Gtk.Window):
         row.add(row_box)
         return row
 
-    # def _build_row(self, entry, is_pinned: bool, previous_entry=None) -> Gtk.ListBoxRow:
-    #     row = Gtk.ListBoxRow()
-    #     row_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-    #     row_box.set_margin_top(4)
-    #     row_box.set_margin_bottom(4)
-    #     row_box.set_margin_start(6)
-    #     row_box.set_margin_end(6)
 
-    #     # --- NEW: badge ---
-    #     badge_text = self._format_badge(entry["content_type"])
-    #     if entry["origin"] != "local":
-    #         peer_label_text = entry["origin"].split(".")[0]  # strip the .local. suffix etc, just show hostname
-    #         origin_label = Gtk.Label(label=f"↴ {peer_label_text}")
-    #         origin_label.get_style_context().add_class("dim-label")
-    #         row_box.pack_start(origin_label, False, False, 0)
-
-
-    #     # --- NEW: time label + stale icon, grouped in their own small box ---
-    #     time_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
-    #     stale = is_stale(entry["created_at"])
-
-    #     if stale:
-    #         stale_icon = load_icon("alarm-clock", size=14)
-    #         stale_icon.set_tooltip_text("This entry may be stale")
-    #         time_box.pack_start(stale_icon, False, False, 0)
-
-
-    #     time_label = Gtk.Label(label=format_relative_time(entry["created_at"]))
-    #     time_label.get_style_context().add_class("dim-label")
-    #     time_box.pack_start(time_label, False, False, 0)
-    #     row_box.pack_start(time_box, False, False, 0)
-
-    #     text_label = Gtk.Label(label=truncate(entry["content"]))
-    #     text_label.set_xalign(0)
-    #     text_label.set_hexpand(True)
-    #     text_label.set_ellipsize(3)
-    #     if stale:  # --- NEW: dim the preview text too when stale ---
-    #         text_label.get_style_context().add_class("dim-label")
-
-    #     if previous_entry is not None:
-    #         diff_button = self._icon_button("git-compare", "Compare with previous entry")
-    #         diff_button.connect(
-    #             "clicked", self._make_diff_handler(entry, previous_entry)
-    #         )
-    #         row_box.pack_end(diff_button, False, False, 0)
-
-
-    #     pin_icon = "star-filled" if is_pinned else "star"
-    #     pin_tooltip = "Unpin" if is_pinned else "Pin (max 5)"
-    #     pin_button = self._icon_button(pin_icon, pin_tooltip)
-    #     pin_button.connect("clicked", self._make_pin_handler(entry, is_pinned))
-
-    #     burn_icon = "flame-active" if entry["self_destruct"] else "flame"
-    #     burn_tooltip = (
-    #         "Self-destruct: ON (copy will auto-delete + wipe clipboard)"
-    #         if entry["self_destruct"]
-    #         else "Mark as self-destruct"
-    #     )
-    #     burn_button = self._icon_button(burn_icon, burn_tooltip)
-
-    #     burn_button.connect("clicked", self._make_burn_toggle_handler(entry))
-
-    #     qr_button = self._icon_button("qr-code", "Show QR code")
-    #     qr_button.connect("clicked", self._make_qr_handler(entry))
-
-    #     copy_button = self._icon_button("copy", "Copy to clipboard")
-    #     copy_button.connect("clicked", self._make_copy_handler(entry))
-
-    #     delete_button = self._icon_button("trash-2", "Delete entry")
-    #     delete_button.connect("clicked", self._make_delete_handler(entry))
-
-    #     row_box.pack_start(text_label, True, True, 0)
-    #     row_box.pack_end(burn_button, False, False, 0)
-    #     row_box.pack_end(delete_button, False, False, 0)
-    #     row_box.pack_end(copy_button, False, False, 0)
-    #     row_box.pack_end(qr_button, False, False, 0)
-    #     row_box.pack_end(pin_button, False, False, 0)
-
-    #     row.add(row_box)
-    #     return row
 
 
     def _icon_button(self, icon_name, tooltip):

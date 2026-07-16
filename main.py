@@ -70,6 +70,7 @@ def main():
 
     def finish_startup():
         from theme_manager import apply_theme_for_current_system_mode, watch_system_theme_changes
+        from qr_server import set_phone_content_callback
 
         apply_theme_for_current_system_mode()
         app_refs["theme_watcher"] = watch_system_theme_changes()
@@ -122,6 +123,35 @@ def main():
                 perform_update()
                 quit_app()
 
+        def show_send_qr():
+            settings = load_settings()
+            url = f"https://{settings['last_known_ip']}:{settings['port']}/send"
+            from qr_popup import generate_qr_for_url
+            image_path = generate_qr_for_url(url, "send-from-phone")
+
+            popup = Gtk.Window(title="Scan to send from your phone")
+            popup.set_default_size(320, 380)
+
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+            box.set_border_width(16)
+
+            from gi.repository import GdkPixbuf
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(image_path, 280, 280, True)
+            image = Gtk.Image.new_from_pixbuf(pixbuf)
+            box.pack_start(image, True, True, 0)
+
+            hint = Gtk.Label(
+                label="After scanning, use your browser's \"Add to Home Screen\" "
+                      "option to install this as an app for quick access later."
+            )
+            hint.set_line_wrap(True)
+            hint.set_justify(Gtk.Justification.CENTER)
+            hint.set_margin_top(10)
+            box.pack_start(hint, False, False, 0)
+
+            popup.add(box)
+            popup.show_all()
+
         def open_playback():
             if "playback_window" not in app_refs or not app_refs["playback_window"].get_visible():
                 app_refs["playback_window"] = PlaybackWindow()
@@ -135,8 +165,11 @@ def main():
             else:
                 app_refs["about_window"].present()
 
+
         def on_clipboard_changed():
             GLib.idle_add(history_window.refresh)
+
+        set_phone_content_callback(lambda: GLib.idle_add(on_clipboard_changed))
 
         threading.Thread(
             target=start_monitoring,
@@ -253,6 +286,7 @@ def main():
             on_settings=open_settings,
             on_playback=open_playback,
             on_peers=open_peers,
+            on_send_from_phone=show_send_qr,
             on_quit=quit_app,
             on_check_updates=on_check_updates,
             on_about=open_about,
