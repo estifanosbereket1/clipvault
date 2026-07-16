@@ -23,6 +23,7 @@ from storage import (
 )
 
 
+
 def format_relative_time(created_at_str: str) -> str:
     created_at = datetime.strptime(created_at_str, "%Y-%m-%d %H:%M:%S")
     delta = datetime.utcnow() - created_at
@@ -135,6 +136,11 @@ class HistoryWindow(Gtk.Window):
         self.synced_expander.add(self.synced_list_box)
 
         self.refresh()
+
+    def _format_secret_warning(self, secret_type):
+        if not secret_type:
+            return None
+        return f"⚠ {secret_type}"
 
     def on_search_changed(self, _entry):
         self.refresh()
@@ -289,7 +295,23 @@ class HistoryWindow(Gtk.Window):
         #     origin_label = Gtk.Label(label=f"↴ {peer_label_text}")
         #     origin_label.get_style_context().add_class("dim-label")
         #     row_box.pack_start(origin_label, False, False, 0)
-        #
+
+        badge_text = self._format_badge(entry["content_type"])
+        if badge_text:
+            badge_label = Gtk.Label(label=badge_text)
+            badge_label.get_style_context().add_class("dim-label")
+            row_box.pack_start(badge_label, False, False, 0)
+
+        secret_type = entry["contains_secret"] if "contains_secret" in entry.keys() else None
+        secret_warning = self._format_secret_warning(secret_type)
+        if secret_warning:
+            secret_label = Gtk.Label(label=secret_warning)
+            secret_label.get_style_context().add_class("secret-warning-label")
+            secret_label.set_tooltip_text(
+                f"This looks like a {secret_type}. Consider marking it as self-destruct."
+            )
+            row_box.pack_start(secret_label, False, False, 0)
+
         if entry["origin"] == "phone":
             origin_label = Gtk.Label(label="📱 from phone")
             origin_label.get_style_context().add_class("dim-label")

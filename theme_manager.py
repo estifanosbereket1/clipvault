@@ -53,6 +53,11 @@ def build_css(palette: dict) -> str:
         padding: 4px 8px;
     }}
 
+    label.secret-warning-label {{
+        color: {palette['error']};
+        font-weight: 600;
+    }}
+
     scrolledwindow, list, row {{
         background-color: {palette['bg']};
     }}
