@@ -1,0 +1,79 @@
+import base64
+import json
+from datetime import datetime, timezone
+from urllib.parse import urlparse, parse_qs
+
+
+def _decode_jwt_segment(segment: str) -> dict:
+    padded = segment + "=" * (-len(segment) % 4)
+    decoded_bytes = base64.urlsafe_b64decode(padded)
+    return json.loads(decoded_bytes)
+
+
+def inspect_jwt(token: str) -> dict:
+    """
+    Returns {"header": dict, "payload": dict, "expiry_info": str | None, "error": str | None}
+    """
+    try:
+        parts = token.strip().split(".")
+        header = _decode_jwt_segment(parts[0])
+        payload = _decode_jwt_segment(parts[1])
+    except Exception as e:
+        return {"header": None, "payload": None, "expiry_info": None, "error": str(e)}
+
+    expiry_info = None
+    if "exp" in payload:
+        try:
+            exp_time = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
+            now = datetime.now(timezone.utc)
+            if exp_time > now:
+                delta = exp_time - now
+                expiry_info = f"Expires {exp_time.strftime('%Y-%m-%d %H:%M UTC')} (in {delta.days}d {delta.seconds // 3600}h)"
+            else:
+                delta = now - exp_time
+                expiry_info = f"Expired {exp_time.strftime('%Y-%m-%d %H:%M UTC')} ({delta.days}d {delta.seconds // 3600}h ago)"
+        except Exception:
+            expiry_info = None
+
+    return {"header": header, "payload": payload, "expiry_info": expiry_info, "error": None}
+
+
+def inspect_json(text: str) -> dict:
+    """Returns {"pretty": str, "error": str | None}"""
+    try:
+        parsed = json.loads(text)
+        pretty = json.dumps(parsed, indent=2, ensure_ascii=False)
+        return {"pretty": pretty, "error": None}
+    except Exception as e:
+        return {"pretty": None, "error": str(e)}
+
+
+def inspect_url(url: str) -> dict:
+    """Returns {"scheme": str, "hostname": str, "path": str, "query_params": dict, "error": str | None}"""
+    try:
+        parsed = urlparse(url)
+        query_params = {k: v[0] if len(v) == 1 else v for k, v in parse_qs(parsed.query).items()}
+        return {
+            "scheme": parsed.scheme,
+            "hostname": parsed.hostname or "",
+            "path": parsed.path or "/",
+            "query_params": query_params,
+            "error": None,
+        }
+    except Exception as e:
+        return {"scheme": None, "hostname": None, "path": None, "query_params": None, "error": str(e)}
+
+
+def _standalone_test():
+    jwt_sample = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0IiwiZXhwIjoxODAwMDAwMDAwfQ.dQw4w9WgXcQ"
+    print("JWT:", inspect_jwt(jwt_sample))
+
+    json_sample = '{"name": "test", "nested": {"a": 1, "b": [1,2,3]}}'
+    print("\nJSON:", inspect_json(json_sample))
+
+    url_sample = "https://example.com/search?q=clipvault&page=2"
+    print("\nURL:", inspect_url(url_sample))
+
+
+if __name__ == "__main__":
+    _standalone_test()

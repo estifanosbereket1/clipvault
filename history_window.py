@@ -22,6 +22,7 @@ from storage import (
     unpin_entry,
 )
 
+from inspector_display import InspectorPopup
 
 
 def format_relative_time(created_at_str: str) -> str:
@@ -42,6 +43,8 @@ def format_relative_time(created_at_str: str) -> str:
 
 
 STALE_THRESHOLD_MINUTES = 10
+
+INSPECTABLE_TYPES = {"jwt", "json", "url"}
 
 
 def is_stale(created_at_str: str) -> bool:
@@ -358,6 +361,10 @@ class HistoryWindow(Gtk.Window):
                     "clicked", self._make_diff_handler(entry, previous_entry)
                 )
                 row_box.pack_end(diff_button, False, False, 0)
+            if entry["content_type"] in INSPECTABLE_TYPES:
+                inspect_button = self._icon_button("search", "Inspect")
+                inspect_button.connect("clicked", self._make_inspect_handler(entry))
+                row_box.pack_end(inspect_button, False, False, 0)
 
             pin_icon = "star-filled" if is_pinned else "star"
             pin_tooltip = "Unpin" if is_pinned else "Pin (max 5)"
@@ -399,6 +406,11 @@ class HistoryWindow(Gtk.Window):
         button.set_image(load_icon(icon_name))
         button.set_tooltip_text(tooltip)
         return button
+
+    def _make_inspect_handler(self, entry):
+        def handler(_button):
+            InspectorPopup(entry["content"], entry["content_type"])
+        return handler
 
     def _make_diff_handler(self, entry, previous_entry):
         def handler(_button):
