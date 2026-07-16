@@ -3,7 +3,7 @@ import os
 import sqlite3
 from pathlib import Path
 
-from content_detector import detect_type
+from content_detector import detect_type, contains_secret
 
 from rapidfuzz import fuzz
 
@@ -46,6 +46,8 @@ def init_db():
             cur.execute("ALTER TABLE history ADD COLUMN self_destruct BOOLEAN DEFAULT 0")
         if "origin" not in columns:
             cur.execute("ALTER TABLE history ADD COLUMN origin TEXT DEFAULT 'local'")
+        if "contains_secret" not in columns:
+            cur.execute("ALTER TABLE history ADD COLUMN contains_secret TEXT DEFAULT NULL")
 
 
 def get_local_entries_since(since_timestamp: str, exclude_origin: str = None):
@@ -150,9 +152,10 @@ def add_entry(content: str, origin: str = "local"):
             ).fetchone()
             if latest_content is None or content != latest_content[0]:
                 content_type = detect_type(content)
+                secret_type = contains_secret(content)
                 cur.execute(
-                    "INSERT INTO history (content, content_type, origin) VALUES (?, ?, ?)",
-                    (content, content_type, origin),
+                    "INSERT INTO history (content, content_type, origin, contains_secret) VALUES (?, ?, ?, ?)",
+                    (content, content_type, origin, secret_type),
                 )
                 inserted = True
     return inserted
