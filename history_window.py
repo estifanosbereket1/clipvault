@@ -102,6 +102,34 @@ class HistoryWindow(Gtk.Window):
         self.search_entry.connect("search-changed", self.on_search_changed)
         outer_box.pack_start(self.search_entry, False, False, 0)
 
+
+        search_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        search_row.pack_start(self.search_entry, True, True, 0)
+
+        self.regex_toggle = Gtk.ToggleButton(label=".*")
+        self.regex_toggle.set_tooltip_text("Treat search as regex")
+        self.regex_toggle.connect("toggled", lambda _btn: self.refresh())
+        search_row.pack_start(self.regex_toggle, False, False, 0)
+
+        self.type_filter_combo = Gtk.ComboBoxText()
+        self.type_filter_combo.append("", "All types")
+        for type_id, type_label in (
+            ("json", "JSON"),
+            ("jwt", "JWT"),
+            ("url", "URL"),
+            ("uuid", "UUID"),
+            ("ip_address", "IP Address"),
+            ("email", "Email"),
+            ("code", "Code"),
+            ("text", "Text"),
+        ):
+            self.type_filter_combo.append(type_id, type_label)
+        self.type_filter_combo.set_active_id("")
+        self.type_filter_combo.connect("changed", lambda _combo: self.refresh())
+        search_row.pack_start(self.type_filter_combo, False, False, 0)
+
+        outer_box.pack_start(search_row, False, False, 0)
+
         # --- Pinned section ---
         self.pinned_label = Gtk.Label(label="Pinned")
         self.pinned_label.set_xalign(0)
@@ -190,17 +218,29 @@ class HistoryWindow(Gtk.Window):
 
         query = self._get_search_query()
 
+        # if query:
+        #     matched_entries = search_entries(query, limit=100)
+        #     local_entries = [e for e in matched_entries if e["origin"] == "local"]
+        #     synced_entries = [e for e in matched_entries if e["origin"] != "local"]
+        # else:
+        #     recent_entries = get_recent_unpinned(limit=load_settings()["history_limit"])
+        #     # local_entries = [e for e in recent_entries if e["origin"] == "local"]
+        #     # synced_entries = [e for e in recent_entries if e["origin"] != "local"]
+        #     local_entries = [e for e in recent_entries if e["origin"] in ("local", "phone")]
+        #     synced_entries = [e for e in recent_entries if e["origin"] not in ("local", "phone")]
+
+        query = self._get_search_query()
+        use_regex = self.regex_toggle.get_active()
+        type_filter = self.type_filter_combo.get_active_id() or None
+
         if query:
-            matched_entries = search_entries(query, limit=100)
-            local_entries = [e for e in matched_entries if e["origin"] == "local"]
-            synced_entries = [e for e in matched_entries if e["origin"] != "local"]
+            matched_entries = search_entries(query, limit=100, use_regex=use_regex, content_type_filter=type_filter)
+            local_entries = [e for e in matched_entries if e["origin"] in ("local", "phone")]
+            synced_entries = [e for e in matched_entries if e["origin"] not in ("local", "phone")]
         else:
             recent_entries = get_recent_unpinned(limit=load_settings()["history_limit"])
-            # local_entries = [e for e in recent_entries if e["origin"] == "local"]
-            # synced_entries = [e for e in recent_entries if e["origin"] != "local"]
             local_entries = [e for e in recent_entries if e["origin"] in ("local", "phone")]
             synced_entries = [e for e in recent_entries if e["origin"] not in ("local", "phone")]
-
 
         if not query:
             pinned_entries = get_pinned_entries()
