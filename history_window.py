@@ -1,7 +1,6 @@
 import gi
 import pyperclip
 
-from window_utils import safe_present
 
 gi.require_version("Gtk", "3.0")
 from datetime import datetime
@@ -521,13 +520,13 @@ class HistoryWindow(Gtk.Window):
         self.hide()
         return True
 
-    # def show_window(self):
-    #     self.refresh()
-    #     self.show_all()
-    #     self.present()
     def show_window(self):
         self.refresh()
-        safe_present(self)
+        self.show_all()
+        self.present()
+    # def show_window(self):
+    #     self.refresh()
+    #     safe_present(self)
 
 
 def open_qr_popup(entry):
