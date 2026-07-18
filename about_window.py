@@ -65,7 +65,7 @@ class AboutWindow(Gtk.Window):
 
         description = Gtk.Label(
             label="A clipboard manager with QR-to-phone sync, LAN peer sync, "
-                  "search, diffing, and more — built to keep your data on "
+                  "search, diffing, and more , built to keep your data on "
                   "your own devices."
         )
         description.set_line_wrap(True)

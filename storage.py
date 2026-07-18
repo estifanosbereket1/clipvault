@@ -8,6 +8,8 @@ from content_detector import detect_type, contains_secret
 from rapidfuzz import fuzz
 
 import re
+import uuid
+
 
 FUZZY_MATCH_THRESHOLD = 60
 
@@ -17,6 +19,12 @@ def get_db_path():
     db_path = base_path + "/clipvault/history.db"
     os.makedirs(f"{base_path}/clipvault", exist_ok=True)
     return Path(db_path)
+
+def get_images_dir() -> Path:
+    base_path = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+    images_dir = Path(base_path) / "clipvault" / "images"
+    os.makedirs(images_dir, exist_ok=True)
+    return images_dir
 
 
 @contextlib.contextmanager
@@ -161,6 +169,40 @@ def add_entry(content: str, origin: str = "local"):
                 )
                 inserted = True
     return inserted
+
+
+def add_image_entry(image_bytes: bytes, origin: str = "local"):
+    """
+    Saves image bytes to a file and inserts a history row pointing at it.
+    Skips insertion if the bytes are identical to the most recently added
+    image (same duplicate-prevention spirit as add_entry, but comparing
+    raw bytes of the last IMAGE specifically, not the last entry overall).
+    """
+    with get_connection() as conn:
+        cur = conn.cursor()
+        latest_image_row = cur.execute(
+            "SELECT content FROM history WHERE content_type = 'image' ORDER BY created_at DESC LIMIT 1"
+        ).fetchone()
+
+        if latest_image_row is not None:
+            latest_path = latest_image_row["content"]
+            if os.path.exists(latest_path):
+                with open(latest_path, "rb") as f:
+                    latest_bytes = f.read()
+                if latest_bytes == image_bytes:
+                    return False  # identical to the last image, skip
+
+        images_dir = get_images_dir()
+        filename = f"{uuid.uuid4().hex}.png"
+        file_path = str(images_dir / filename)
+        with open(file_path, "wb") as f:
+            f.write(image_bytes)
+
+        cur.execute(
+            "INSERT INTO history (content, content_type, origin) VALUES (?, ?, ?)",
+            (file_path, "image", origin),
+        )
+        return True
 
 
 def get_history(limit=20):

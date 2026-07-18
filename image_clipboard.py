@@ -1,16 +1,48 @@
 import subprocess
+import os
+
+IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp")
 
 
 def get_clipboard_image_bytes() -> bytes | None:
     """
-    Returns the raw PNG bytes currently on the clipboard, or None if
-    there's no image data. Uses wl-paste directly since GTK's own
-    clipboard API has been unreliable for image data on some GNOME/Wayland
-    setups.
+    Returns raw image bytes currently on the clipboard, checking direct
+    image data first, then a file reference to an image. Does one cheap
+    'list types' call first to avoid spawning multiple subprocesses when
+    there's clearly nothing image-related on the clipboard.
     """
+    available_types = _get_clipboard_types()
+    if available_types is None:
+        return None
+
+    if "image/png" in available_types:
+        return _fetch_clipboard_data("image/png")
+
+    if "text/uri-list" in available_types:
+        return _get_image_bytes_from_uri_list()
+
+    return None
+
+
+
+def _get_clipboard_types() -> set | None:
     try:
         result = subprocess.run(
-            ["wl-paste", "--type", "image/png"],
+            ["xclip", "-selection", "clipboard", "-o", "-t", "TARGETS"],
+            capture_output=True,
+            timeout=3,
+        )
+        if result.returncode != 0:
+            return None
+        return set(result.stdout.decode("utf-8", errors="ignore").splitlines())
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+
+
+def _fetch_clipboard_data(mime_type: str) -> bytes | None:
+    try:
+        result = subprocess.run(
+            ["xclip", "-selection", "clipboard", "-o", "-t", mime_type],
             capture_output=True,
             timeout=3,
         )
@@ -21,25 +53,18 @@ def get_clipboard_image_bytes() -> bytes | None:
         return None
 
 
-def save_image_bytes_to_file(image_bytes: bytes, path: str):
-    with open(path, "wb") as f:
-        f.write(image_bytes)
+def _get_image_bytes_from_uri_list() -> bytes | None:
+    uri_bytes = _fetch_clipboard_data("text/uri-list")
+    if uri_bytes is None:
+        return None
 
-
-def _standalone_test():
-    import time
-    print("Copy an image (Super+Shift+S to screenshot an area), you have 5 seconds...")
-    time.sleep(5)
-
-    image_bytes = get_clipboard_image_bytes()
-    if image_bytes is None:
-        print("No image found on clipboard.")
-        return
-
-    print(f"Found image: {len(image_bytes)} bytes")
-    save_image_bytes_to_file(image_bytes, "/tmp/clipvault_image_test.png")
-    print("Saved to /tmp/clipvault_image_test.png")
-
-
-if __name__ == "__main__":
-    _standalone_test()
+    uri_list = uri_bytes.decode("utf-8", errors="ignore").strip()
+    for line in uri_list.splitlines():
+        line = line.strip()
+        if not line.startswith("file://"):
+            continue
+        path = line[len("file://"):]
+        if path.lower().endswith(IMAGE_EXTENSIONS) and os.path.isfile(path):
+            with open(path, "rb") as f:
+                return f.read()
+    return None
