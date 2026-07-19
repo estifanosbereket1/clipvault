@@ -4,7 +4,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 import pyperclip
 
-from inspector import inspect_jwt, inspect_json, inspect_url
+from inspector import inspect_docker_image, inspect_git_url, inspect_jwt, inspect_json, inspect_ssh_target, inspect_url
 
 
 class InspectorPopup(Gtk.Window):
@@ -27,6 +27,12 @@ class InspectorPopup(Gtk.Window):
             self._build_json_view(outer, content)
         elif content_type == "url":
             self._build_url_view(outer, content)
+        elif content_type == "git_url":
+            self._build_git_url_view(outer, content)
+        elif content_type == "docker_image":
+            self._build_docker_view(outer, content)
+        elif content_type == "ssh_target":
+            self._build_ssh_view(outer, content)
         else:
             outer.pack_start(Gtk.Label(label="No inspector available for this type."), False, False, 0)
 
@@ -100,6 +106,63 @@ class InspectorPopup(Gtk.Window):
         open_btn.connect("clicked", lambda _b: Gtk.show_uri_on_window(None, content, 0))
         outer.pack_start(open_btn, False, False, 10)
 
+    def _build_git_url_view(self, outer, content):
+        result = inspect_git_url(content)
+
+        if result["error"]:
+            outer.pack_start(Gtk.Label(label=f"Couldn't parse: {result['error']}"), False, False, 0)
+            return
+
+        self._add_labeled_row(outer, "Host", result["host"])
+        self._add_labeled_row(outer, "Owner", result["owner"])
+        self._add_labeled_row(outer, "Repo", result["repo"])
+
+        outer.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 8)
+
+        clone_https_btn = self._copy_button(result["https_clone"])
+        clone_https_btn.set_label(f"Copy HTTPS clone URL")
+        outer.pack_start(clone_https_btn, False, False, 4)
+
+        clone_ssh_btn = self._copy_button(result["ssh_clone"])
+        clone_ssh_btn.set_label(f"Copy SSH clone URL")
+        outer.pack_start(clone_ssh_btn, False, False, 4)
+
+        open_btn = Gtk.Button(label="Open repository in browser")
+        open_btn.connect("clicked", lambda _b: Gtk.show_uri_on_window(None, result["browser_url"], 0))
+        outer.pack_start(open_btn, False, False, 10)
+
+
+    def _build_docker_view(self, outer, content):
+        result = inspect_docker_image(content)
+
+        if result["error"]:
+            outer.pack_start(Gtk.Label(label=f"Couldn't parse: {result['error']}"), False, False, 0)
+            return
+
+        pull_btn = self._copy_button(result["pull_command"])
+        pull_btn.set_label(f"Copy: {result['pull_command']}")
+        outer.pack_start(pull_btn, False, False, 4)
+
+        run_btn = self._copy_button(result["run_command"])
+        run_btn.set_label(f"Copy: {result['run_command']}")
+        outer.pack_start(run_btn, False, False, 4)
+
+
+    def _build_ssh_view(self, outer, content):
+        result = inspect_ssh_target(content)
+
+        if result["error"]:
+            outer.pack_start(Gtk.Label(label=f"Couldn't parse: {result['error']}"), False, False, 0)
+            return
+
+        ssh_btn = self._copy_button(result["ssh_command"])
+        ssh_btn.set_label(f"Copy: {result['ssh_command']}")
+        outer.pack_start(ssh_btn, False, False, 4)
+
+        scp_btn = self._copy_button(result["scp_template"])
+        scp_btn.set_label(f"Copy: {result['scp_template']}")
+        outer.pack_start(scp_btn, False, False, 4)
+
     def _add_labeled_row(self, outer, label_text, value):
         row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         label = Gtk.Label(label=f"{label_text}:")
@@ -124,10 +187,7 @@ class InspectorPopup(Gtk.Window):
 
 
 def _standalone_test():
-    win = InspectorPopup(
-        content='{"name": "test", "value": 42}',
-        content_type="json",
-    )
+    win = InspectorPopup(content="git@github.com:torvalds/linux.git", content_type="git_url")
     win.connect("destroy", Gtk.main_quit)
     Gtk.main()
 

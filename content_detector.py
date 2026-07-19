@@ -32,7 +32,19 @@ UUID_PATTERN = re.compile(
 IPV4_PATTERN = re.compile(r"^(\d{1,3}\.){3}\d{1,3}$")
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
+GIT_SSH_PATTERN = re.compile(r"^git@[\w.\-]+:[\w.\-/]+\.git$")
+GIT_HTTPS_PATTERN = re.compile(r"^https?://[\w.\-]+/[\w.\-/]+\.git$")
+DOCKER_IMAGE_PATTERN = re.compile(
+    r"^([\w.\-]+(:[0-9]+)?/)?[\w.\-]+(/[\w.\-]+)*(:[\w.\-]+)?$"
+)
+
 MIN_LINES_FOR_CODE_DETECTION = 3
+
+
+
+
+SSH_TARGET_PATTERN = re.compile(r"^ssh\s+[\w.\-]+@[\w.\-]+$")
+SSH_BARE_TARGET_PATTERN = re.compile(r"^[\w\-]+@(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|[\w\-]+)$")
 
 SECRET_PATTERNS = [
     ("AWS Access Key", re.compile(r"AKIA[0-9A-Z]{16}")),
@@ -51,6 +63,15 @@ def contains_secret(text: str) -> str | None:
         if pattern.search(text):
             return name
     return None
+
+def _looks_like_docker_image(text: str) -> bool:
+    if len(text) > 200 or " " in text or "\n" in text:
+        return False
+    if not DOCKER_IMAGE_PATTERN.match(text):
+        return False
+    # require at least a tag or a registry-style slash, so bare single words
+    # (like "hello") don't get misclassified as image references
+    return ":" in text or "/" in text
 
 
 def _is_valid_ipv4(text: str) -> bool:
@@ -80,7 +101,6 @@ def _guess_code_language(text: str) -> str | None:
 
     return None
 
-
 def detect_type(text: str) -> str:
     stripped = text.strip()
 
@@ -97,6 +117,12 @@ def detect_type(text: str) -> str:
         except (json.JSONDecodeError, ValueError):
             pass
 
+    if GIT_SSH_PATTERN.match(stripped) or GIT_HTTPS_PATTERN.match(stripped):
+        return "git_url"
+
+    if SSH_TARGET_PATTERN.match(stripped) or SSH_BARE_TARGET_PATTERN.match(stripped):
+        return "ssh_target"
+
     if URL_PATTERN.match(stripped):
         return "url"
 
@@ -112,11 +138,67 @@ def detect_type(text: str) -> str:
     if "Traceback (most recent call last)" in stripped:
         return "stack_trace"
 
+    if _looks_like_docker_image(stripped):
+        return "docker_image"
+
     code_language = _guess_code_language(stripped)
     if code_language:
         return f"code:{code_language}"
 
     return "text"
+
+
+# def detect_type(text: str) -> str:
+#     stripped = text.strip()
+
+#     if not stripped:
+#         return "text"
+
+#     if JWT_PATTERN.match(stripped):
+#         return "jwt"
+
+#     if stripped[0] in "{[":
+#         try:
+#             json.loads(stripped)
+#             return "json"
+#         except (json.JSONDecodeError, ValueError):
+#             pass
+
+#     if URL_PATTERN.match(stripped):
+#         return "url"
+
+#     if UUID_PATTERN.match(stripped):
+#         return "uuid"
+
+#     if _is_valid_ipv4(stripped):
+#         return "ip_address"
+
+#     if EMAIL_PATTERN.match(stripped):
+#         return "email"
+
+#     if GIT_SSH_PATTERN.match(stripped) or GIT_HTTPS_PATTERN.match(stripped):
+#         return "git_url"
+
+#     if SSH_TARGET_PATTERN.match(stripped):
+#         return "ssh_target"
+
+#     if URL_PATTERN.match(stripped):
+#         return "url"
+
+#     if UUID_PATTERN.match(stripped):
+#         return "uuid"
+
+#     if "Traceback (most recent call last)" in stripped:
+#         return "stack_trace"
+
+#     if _looks_like_docker_image(stripped):
+#         return "docker_image"
+
+#     code_language = _guess_code_language(stripped)
+#     if code_language:
+#         return f"code:{code_language}"
+
+#     return "text"
 
 
 def _standalone_test():

@@ -49,7 +49,8 @@ def format_relative_time(created_at_str: str) -> str:
 
 STALE_THRESHOLD_MINUTES = 10
 
-INSPECTABLE_TYPES = {"jwt", "json", "url"}
+# INSPECTABLE_TYPES = {"jwt", "json", "url"}
+INSPECTABLE_TYPES = {"jwt", "json", "url", "git_url", "docker_image", "ssh_target"}
 
 
 def is_stale(created_at_str: str) -> bool:
