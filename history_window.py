@@ -18,10 +18,13 @@ from settings_store import load_settings
 from storage import (
     add_entry,
     add_image_entry,
+    add_tag,
     delete_entry,
     get_pinned_entries,
     get_recent_unpinned,
+    get_tags_for_entry,
     pin_entry,
+    remove_tag,
     search_entries,
     toggle_self_destruct,
     unpin_entry,
@@ -347,9 +350,14 @@ class HistoryWindow(Gtk.Window):
 
     def _build_row(self, entry, is_pinned: bool, previous_entry=None) -> Gtk.ListBoxRow:
         row = Gtk.ListBoxRow()
+        row_container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         row_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        # row_box.set_margin_top(4)
+        # row_box.set_margin_bottom(4)
+        # row_box.set_margin_start(6)
+        # row_box.set_margin_end(6)
         row_box.set_margin_top(4)
-        row_box.set_margin_bottom(4)
+        row_box.set_margin_bottom(2)
         row_box.set_margin_start(6)
         row_box.set_margin_end(6)
 
@@ -469,17 +477,72 @@ class HistoryWindow(Gtk.Window):
             row_box.pack_end(burn_button, False, False, 0)
             row_box.pack_end(delete_button, False, False, 0)
             row_box.pack_end(copy_button, False, False, 0)
+            row_container.pack_start(row_box, False, False, 0)
             if not is_image:
                 qr_button = self._icon_button("qr-code", "Show QR code")
                 qr_button.connect("clicked", self._make_qr_handler(entry))
                 row_box.pack_end(qr_button, False, False, 0)
+
             row_box.pack_end(pin_button, False, False, 0)
 
-        row.add(row_box)
+            if not self.compare_mode:
+                tags_row = self._build_tags_row(entry)
+                row_container.pack_start(tags_row, False, False, 0)
+
+        # row.add(row_box)
+        row.add(row_container)
         return row
 
+    def _make_remove_tag_handler(self, entry, tag):
+        def handler(_button):
+            remove_tag(entry["id"], tag)
+            self.refresh()
+        return handler
 
+    def _make_add_tag_handler(self, entry):
+        def handler(_button):
+            dialog = Gtk.Dialog(title="Add Tag", transient_for=self, flags=0)
+            dialog.add_buttons(
+                Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+                Gtk.STOCK_OK, Gtk.ResponseType.OK,
+            )
+            entry_field = Gtk.Entry()
+            entry_field.set_placeholder_text("tag name")
+            entry_field.set_activates_default(True)
+            dialog.set_default_response(Gtk.ResponseType.OK)
+            content_area = dialog.get_content_area()
+            content_area.set_border_width(10)
+            content_area.add(entry_field)
+            dialog.show_all()
 
+            response = dialog.run()
+            tag_text = entry_field.get_text()
+            dialog.destroy()
+
+            if response == Gtk.ResponseType.OK and tag_text.strip():
+                add_tag(entry["id"], tag_text)
+                self.refresh()
+        return handler
+
+    def _build_tags_row(self, entry) -> Gtk.Box:
+        tags_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        tags_box.set_margin_start(6)
+        tags_box.set_margin_bottom(4)
+
+        tags = get_tags_for_entry(entry["id"])
+        for tag in tags:
+            chip = Gtk.Button(label=tag)
+            chip.set_tooltip_text("Click to remove tag")
+            chip.get_style_context().add_class("tag-chip")
+            chip.connect("clicked", self._make_remove_tag_handler(entry, tag))
+            tags_box.pack_start(chip, False, False, 0)
+
+        add_btn = Gtk.Button(label="+ tag")
+        add_btn.get_style_context().add_class("tag-chip-add")
+        add_btn.connect("clicked", self._make_add_tag_handler(entry))
+        tags_box.pack_start(add_btn, False, False, 0)
+
+        return tags_box
 
     def _icon_button(self, icon_name, tooltip):
         button = Gtk.Button()

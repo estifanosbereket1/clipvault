@@ -46,6 +46,9 @@ def init_db():
         cur.execute(
             "CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY,content TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, pinned BOOLEAN DEFAULT 0)"
         )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS tags (entry_id INTEGER NOT NULL, tag TEXT NOT NULL, PRIMARY KEY (entry_id, tag))"
+        )
         cur.execute("PRAGMA table_info(history)")
         columns = [row["name"] for row in cur.fetchall()]
         if "pinned_at" not in columns:
@@ -104,6 +107,7 @@ def get_pinned_entries():
         return cur.execute(
             "SELECT * FROM history WHERE pinned = 1 ORDER BY pinned_at DESC"
         ).fetchall()
+
 
 
 def get_oldest_pinned_entry():
@@ -314,3 +318,40 @@ def search_entries(query: str, limit: int = 50, use_regex: bool = False, content
 
 #     scored.sort(key=lambda pair: pair[0], reverse=True)
 #     return [row for score, row in scored[:limit]]
+
+def add_tag(entry_id: int, tag: str):
+    tag = tag.strip().lower()
+    if not tag:
+        return
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT OR IGNORE INTO tags (entry_id, tag) VALUES (?, ?)",
+            (entry_id, tag),
+        )
+
+
+def remove_tag(entry_id: int, tag: str):
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "DELETE FROM tags WHERE entry_id = ? AND tag = ?",
+            (entry_id, tag),
+        )
+
+
+def get_tags_for_entry(entry_id: int) -> list[str]:
+    with get_connection() as conn:
+        cur = conn.cursor()
+        rows = cur.execute(
+            "SELECT tag FROM tags WHERE entry_id = ? ORDER BY tag",
+            (entry_id,),
+        ).fetchall()
+        return [row["tag"] for row in rows]
+
+
+def get_all_tags() -> list[str]:
+    with get_connection() as conn:
+        cur = conn.cursor()
+        rows = cur.execute("SELECT DISTINCT tag FROM tags ORDER BY tag").fetchall()
+        return [row["tag"] for row in rows]

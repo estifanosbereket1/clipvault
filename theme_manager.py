@@ -34,6 +34,25 @@ def build_css(palette: dict) -> str:
         box-shadow: none;
     }}
 
+    button.tag-chip {{
+        background-color: {palette['surface']};
+        border: 1px solid {palette['accent']};
+        color: {palette['accent']};
+        border-radius: 12px;
+        padding: 2px 10px;
+        font-size: 11px;
+        min-height: 0;
+    }}
+    button.tag-chip-add {{
+        background-color: transparent;
+        border: 1px dashed {palette['border']};
+        color: {palette['muted']};
+        border-radius: 12px;
+        padding: 2px 10px;
+        font-size: 11px;
+        min-height: 0;
+    }}
+
     button:hover {{
         background-color: {palette['border']};
         background-image: none;
